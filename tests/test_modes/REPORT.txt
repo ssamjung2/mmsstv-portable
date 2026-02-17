@@ -1,0 +1,981 @@
+========================================
+SSTV Mode Test Generation Report
+========================================
+Generated: January 30, 2026
+Sample Rate: 48000 Hz
+Test Pattern: Color bars (White/Yellow/Cyan/Green/Magenta/Red/Blue/Black)
+========================================
+
+=== Robot 24 ===
+File: tests/test_modes/Robot_24.wav
+VIS Code: 0x84 (132 decimal)
+VIS Enabled: Yes
+Resolution: 320×240
+Duration: 24.000 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 1235520
+Actual Samples: 1235532
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00100001
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== Robot 36 ===
+File: tests/test_modes/Robot_36.wav
+VIS Code: 0x88 (136 decimal)
+VIS Enabled: Yes
+Resolution: 320×240
+Duration: 36.000 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 1811520
+Actual Samples: 1811533
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00010001
+  Bit frequencies: 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== Robot 72 ===
+File: tests/test_modes/Robot_72.wav
+VIS Code: 0x0C (12 decimal)
+VIS Enabled: Yes
+Resolution: 320×240
+Duration: 72.000 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 3539520
+Actual Samples: 3539532
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00110000
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== AVT 90 ===
+File: tests/test_modes/AVT_90.wav
+VIS Code: 0x44 (68 decimal)
+VIS Enabled: Yes
+Resolution: 320×240
+Duration: 90.000 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 4403520
+Actual Samples: 4403533
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00100010
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== Scottie 1 ===
+File: tests/test_modes/Scottie_1.wav
+VIS Code: 0x3C (60 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 109.624 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5345487
+Actual Samples: 5345500
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00111100
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== Scottie 2 ===
+File: tests/test_modes/Scottie_2.wav
+VIS Code: 0xB8 (184 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 71.089 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 3495799
+Actual Samples: 3495812
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00011101
+  Bit frequencies: 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== ScottieDX ===
+File: tests/test_modes/ScottieDX.wav
+VIS Code: 0xCC (204 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 268.877 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 12989606
+Actual Samples: 12989619
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00110011
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== Martin 1 ===
+File: tests/test_modes/Martin_1.wav
+VIS Code: 0xAC (172 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 114.290 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5569448
+Actual Samples: 5569461
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00110101
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== Martin 2 ===
+File: tests/test_modes/Martin_2.wav
+VIS Code: 0x28 (40 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 58.060 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 2870413
+Actual Samples: 2870426
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00010100
+  Bit frequencies: 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== SC2 180 ===
+File: tests/test_modes/SC2_180.wav
+VIS Code: 0xB7 (183 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 182.027 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 8820824
+Actual Samples: 8820837
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 11101101
+  Bit frequencies: 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== SC2 120 ===
+File: tests/test_modes/SC2_120.wav
+VIS Code: 0x3F (63 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 121.734 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5926740
+Actual Samples: 5926753
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 11111100
+  Bit frequencies: 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== SC2 60 ===
+File: tests/test_modes/SC2_60.wav
+VIS Code: 0xBB (187 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 61.539 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 3037365
+Actual Samples: 3037378
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 11011101
+  Bit frequencies: 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD50 ===
+File: tests/test_modes/PD50.wav
+VIS Code: 0xDD (221 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 49.684 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 2468375
+Actual Samples: 2468388
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10111011
+  Bit frequencies: 1300 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD90 ===
+File: tests/test_modes/PD90.wav
+VIS Code: 0x63 (99 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 89.989 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 4402997
+Actual Samples: 4403010
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 11000110
+  Bit frequencies: 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD120 ===
+File: tests/test_modes/PD120.wav
+VIS Code: 0x5F (95 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 126.103 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 6136465
+Actual Samples: 6136478
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 11111010
+  Bit frequencies: 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD160 ===
+File: tests/test_modes/PD160.wav
+VIS Code: 0xE2 (226 decimal)
+VIS Enabled: Yes
+Resolution: 512×400
+Duration: 160.883 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 7805913
+Actual Samples: 7805926
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01000111
+  Bit frequencies: 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD180 ===
+File: tests/test_modes/PD180.wav
+VIS Code: 0x60 (96 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 187.051 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 9061992
+Actual Samples: 9062005
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00000110
+  Bit frequencies: 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD240 ===
+File: tests/test_modes/PD240.wav
+VIS Code: 0xE1 (225 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 248.000 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 11987520
+Actual Samples: 11987532
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10000111
+  Bit frequencies: 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== PD290 ===
+File: tests/test_modes/PD290.wav
+VIS Code: 0xDE (222 decimal)
+VIS Enabled: Yes
+Resolution: 800×616
+Duration: 288.682 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 13940267
+Actual Samples: 13940280
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01111011
+  Bit frequencies: 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== P3 ===
+File: tests/test_modes/P3.wav
+VIS Code: 0x71 (113 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 203.050 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 9829920
+Actual Samples: 9829933
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10001110
+  Bit frequencies: 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== P5 ===
+File: tests/test_modes/P5.wav
+VIS Code: 0x72 (114 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 304.575 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 14703120
+Actual Samples: 14703133
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01001110
+  Bit frequencies: 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== P7 ===
+File: tests/test_modes/P7.wav
+VIS Code: 0xF3 (243 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 406.100 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 19576320
+Actual Samples: 19576332
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 11001111
+  Bit frequencies: 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1300 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MR73 ===
+File: tests/test_modes/MR73.wav
+VIS Code: 0x45 (69 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 73.293 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 3601574
+Actual Samples: 3601587
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10100010
+  Bit frequencies: 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MR90 ===
+File: tests/test_modes/MR90.wav
+VIS Code: 0x46 (70 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 90.189 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 4412582
+Actual Samples: 4412595
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01100010
+  Bit frequencies: 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MR115 ===
+File: tests/test_modes/MR115.wav
+VIS Code: 0x49 (73 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 115.277 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5616806
+Actual Samples: 5616819
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10010010
+  Bit frequencies: 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MR140 ===
+File: tests/test_modes/MR140.wav
+VIS Code: 0x4A (74 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 140.365 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 6821030
+Actual Samples: 6821043
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01010010
+  Bit frequencies: 1100 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MR175 ===
+File: tests/test_modes/MR175.wav
+VIS Code: 0x4C (76 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 175.181 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 8492198
+Actual Samples: 8492211
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00110010
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MP73 ===
+File: tests/test_modes/MP73.wav
+VIS Code: 0x25 (37 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 72.960 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 3585599
+Actual Samples: 3585613
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10100100
+  Bit frequencies: 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MP115 ===
+File: tests/test_modes/MP115.wav
+VIS Code: 0x29 (41 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 115.456 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5625408
+Actual Samples: 5625421
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10010100
+  Bit frequencies: 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MP140 ===
+File: tests/test_modes/MP140.wav
+VIS Code: 0x2A (42 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 139.520 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 6780480
+Actual Samples: 6780493
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01010100
+  Bit frequencies: 1100 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MP175 ===
+File: tests/test_modes/MP175.wav
+VIS Code: 0x2C (44 decimal)
+VIS Enabled: Yes
+Resolution: 320×256
+Duration: 175.360 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 8500800
+Actual Samples: 8500813
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 00110100
+  Bit frequencies: 1100 Hz 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== ML180 ===
+File: tests/test_modes/ML180.wav
+VIS Code: 0x85 (133 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 180.197 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 8732966
+Actual Samples: 8732979
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10100001
+  Bit frequencies: 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== ML240 ===
+File: tests/test_modes/ML240.wav
+VIS Code: 0x86 (134 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 239.717 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 11589926
+Actual Samples: 11589939
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01100001
+  Bit frequencies: 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== ML280 ===
+File: tests/test_modes/ML280.wav
+VIS Code: 0x89 (137 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 280.389 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 13542182
+Actual Samples: 13542195
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 10010001
+  Bit frequencies: 1300 Hz 1100 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== ML320 ===
+File: tests/test_modes/ML320.wav
+VIS Code: 0x8A (138 decimal)
+VIS Enabled: Yes
+Resolution: 640×496
+Duration: 320.069 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 15446822
+Actual Samples: 15446835
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01010001
+  Bit frequencies: 1100 Hz 1300 Hz 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== B/W 8 ===
+File: tests/test_modes/B_W_8.wav
+VIS Code: 0x82 (130 decimal)
+VIS Enabled: Yes
+Resolution: 160×120
+Duration: 8.028 seconds
+Type: B/W
+Sample Rate: 48000 Hz
+Total Samples: 468847
+Actual Samples: 468860
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01000001
+  Bit frequencies: 1100 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1100 Hz (even parity = 0)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== B/W 12 ===
+File: tests/test_modes/B_W_12.wav
+VIS Code: 0x86 (134 decimal)
+VIS Enabled: Yes
+Resolution: 160×120
+Duration: 12.000 seconds
+Type: B/W
+Sample Rate: 48000 Hz
+Total Samples: 659520
+Actual Samples: 659532
+Preamble: 800 ms
+
+VIS Header Analysis:
+  Leader 1: 300 ms @ 1900 Hz
+  Break:     10 ms @ 1200 Hz
+  Leader 2: 300 ms @ 1900 Hz
+  Start:     30 ms @ 1200 Hz
+  Data bits (LSB first): 01100001
+  Bit frequencies: 1100 Hz 1300 Hz 1300 Hz 1100 Hz 1100 Hz 1100 Hz 1100 Hz 1300 Hz 
+  Parity:    30 ms @ 1300 Hz (even parity = 1)
+  Stop:      30 ms @ 1200 Hz
+  Total VIS: 940 ms
+Status: ✓ Generated successfully
+
+=== MP73-N ===
+File: tests/test_modes/MP73_N.wav
+VIS Code: 0x00 (0 decimal)
+VIS Enabled: No (narrow mode)
+Resolution: 320×256
+Duration: 72.960 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 3521279
+Actual Samples: 3521280
+Preamble: 400 ms
+Status: ✓ Generated successfully
+
+=== MP110-N ===
+File: tests/test_modes/MP110_N.wav
+VIS Code: 0x00 (0 decimal)
+VIS Enabled: No (narrow mode)
+Resolution: 320×256
+Duration: 109.824 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5290752
+Actual Samples: 5290752
+Preamble: 400 ms
+Status: ✓ Generated successfully
+
+=== MP140-N ===
+File: tests/test_modes/MP140_N.wav
+VIS Code: 0x00 (0 decimal)
+VIS Enabled: No (narrow mode)
+Resolution: 320×256
+Duration: 139.520 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 6716160
+Actual Samples: 6716160
+Preamble: 400 ms
+Status: ✓ Generated successfully
+
+=== MC110-N ===
+File: tests/test_modes/MC110_N.wav
+VIS Code: 0x00 (0 decimal)
+VIS Enabled: No (narrow mode)
+Resolution: 320×256
+Duration: 109.696 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 5284608
+Actual Samples: 5284608
+Preamble: 400 ms
+Status: ✓ Generated successfully
+
+=== MC140-N ===
+File: tests/test_modes/MC140_N.wav
+VIS Code: 0x00 (0 decimal)
+VIS Enabled: No (narrow mode)
+Resolution: 320×256
+Duration: 140.416 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 6759168
+Actual Samples: 6759168
+Preamble: 400 ms
+Status: ✓ Generated successfully
+
+=== MC180-N ===
+File: tests/test_modes/MC180_N.wav
+VIS Code: 0x00 (0 decimal)
+VIS Enabled: No (narrow mode)
+Resolution: 320×256
+Duration: 180.352 seconds
+Type: Color
+Sample Rate: 48000 Hz
+Total Samples: 8676096
+Actual Samples: 8676095
+Preamble: 400 ms
+Status: ✓ Generated successfully
+
+========================================
+SUMMARY
+========================================
+Total modes: 43
+Successful: 43
+Failed: 0
+========================================

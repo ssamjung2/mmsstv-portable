@@ -1,0 +1,188 @@
+
+================================================================================
+              DSP REFERENCE VECTOR TESTS FOR SSTV DECODER
+================================================================================
+Reference: docs/DSP_CONSOLIDATED_GUIDE.md for end-to-end DSP documentation
+================================================================================
+
+================================================================
+TEST: test_ciirtank_coefficients
+DESC: Second-order resonator impulse response and coefficient extraction
+================================================================
+PASS CIIRTANK a0: actual=0.001617619 expected=0.001617619 diff=3.189075458e-11 rel_error=1.97e-08
+PASS CIIRTANK b1: actual=1.925540016 expected=1.925542000 diff=1.984147251e-06 rel_error=1.03e-06
+PASS CIIRTANK b2: actual=-0.993484028 expected=-0.993472000 diff=1.202817978e-05 rel_error=1.21e-05
+
+================================================================
+TEST: test_ciirtank_100hz
+DESC: 100Hz resonator for FSK/tone detection (tight bandwidth Q=10)
+================================================================
+PASS CIIRTANK 100Hz a0: actual=0.000016362 expected=0.000016400 diff=3.800553582e-08 rel_error=2.32e-03
+
+================================================================
+TEST: test_ciir_butterworth_1khz
+DESC: 2nd-order Butterworth lowpass at 1kHz, 48kHz sampling
+================================================================
+PASS CIIR b0: actual=0.003916127 expected=0.003915000 diff=1.126660547e-06 rel_error=2.88e-04
+PASS CIIR stability: bounded (max=0.051791907 < 1.0)
+
+================================================================
+TEST: test_ciir_butterworth_8khz
+DESC: 2nd-order Butterworth lowpass at 8kHz (audio bandwidth)
+================================================================
+PASS CIIR 8kHz b0: actual=0.155051026 (in expected range 0.1-0.2)
+
+================================================================
+TEST: test_ciir_butterworth_4th_order
+DESC: 4th-order Butterworth lowpass at 2kHz (steeper rolloff)
+================================================================
+PASS CIIR 4th-order b0: actual=0.000213139 (in expected range 0.0001-0.01)
+
+================================================================
+TEST: test_dofir_identity
+DESC: Identity FIR (pass-through): hp=[1, 0, 0]
+================================================================
+PASS DoFIR identity[0]: actual=0.000000000 expected=0.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR identity[1]: actual=0.000000000 expected=0.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR identity[2]: actual=0.250000000 expected=0.250000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR identity[3]: actual=-0.500000000 expected=-0.500000000 diff=0.000000000e+00 rel_error=0.00e+00
+
+================================================================
+TEST: test_dofir_gain
+DESC: FIR gain filter: hp=[0.5, 0, 0] (scale by 0.5)
+================================================================
+PASS DoFIR gain[0]: actual=0.000000000 expected=0.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR gain[1]: actual=0.000000000 expected=0.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR gain[2]: actual=0.500000000 expected=0.500000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR gain[3]: actual=1.000000000 expected=1.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+
+================================================================
+TEST: test_dofir_moving_average
+DESC: 2-tap moving average: hp=[0.5, 0.5, 0]
+================================================================
+PASS DoFIR MA[0]: actual=0.000000000 expected=0.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR MA[1]: actual=0.500000000 expected=0.500000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR MA[2]: actual=1.500000000 expected=1.500000000 diff=0.000000000e+00 rel_error=0.00e+00
+PASS DoFIR MA[3]: actual=2.500000000 expected=2.500000000 diff=0.000000000e+00 rel_error=0.00e+00
+
+================================================================
+TEST: test_cfir2_lpf_symmetry
+DESC: CFIR2 LPF taps are symmetric and normalized
+================================================================
+FAIL CFIR2 symmetry[0]: actual=0.000256759 expected=0.000000000 diff=2.567590031e-04 rel_error=0.00e+00 tol=0.000000010
+FAIL CFIR2 symmetry[1]: actual=0.000410028 expected=0.000256759 diff=1.532692341e-04 rel_error=5.97e-01 tol=0.000000010
+FAIL CFIR2 symmetry[2]: actual=0.000572115 expected=0.000410028 diff=1.620870300e-04 rel_error=3.95e-01 tol=0.000000010
+FAIL CFIR2 symmetry[3]: actual=0.000708683 expected=0.000572115 diff=1.365674163e-04 rel_error=2.39e-01 tol=0.000000010
+FAIL CFIR2 symmetry[4]: actual=0.000773737 expected=0.000708683 diff=6.505419611e-05 rel_error=9.18e-02 tol=0.000000010
+FAIL CFIR2 symmetry[5]: actual=0.000713331 expected=0.000773737 diff=6.040547874e-05 rel_error=7.81e-02 tol=0.000000010
+FAIL CFIR2 symmetry[6]: actual=0.000471768 expected=0.000713331 diff=2.415632304e-04 rel_error=3.39e-01 tol=0.000000010
+FAIL CFIR2 symmetry[7]: actual=-0.000000000 expected=0.000471768 diff=4.717681705e-04 rel_error=1.00e+00 tol=0.000000010
+FAIL CFIR2 symmetry[8]: actual=-0.000734452 expected=-0.000000000 diff=7.344516556e-04 rel_error=1.31e+15 tol=0.000000010
+FAIL CFIR2 symmetry[9]: actual=-0.001737109 expected=-0.000734452 diff=1.002657022e-03 rel_error=1.37e+00 tol=0.000000010
+FAIL CFIR2 symmetry[10]: actual=-0.002976994 expected=-0.001737109 diff=1.239885658e-03 rel_error=7.14e-01 tol=0.000000010
+FAIL CFIR2 symmetry[11]: actual=-0.004379386 expected=-0.002976994 diff=1.402391418e-03 rel_error=4.71e-01 tol=0.000000010
+FAIL CFIR2 symmetry[12]: actual=-0.005822264 expected=-0.004379386 diff=1.442877786e-03 rel_error=3.29e-01 tol=0.000000010
+FAIL CFIR2 symmetry[13]: actual=-0.007137620 expected=-0.005822264 diff=1.315356768e-03 rel_error=2.26e-01 tol=0.000000010
+FAIL CFIR2 symmetry[14]: actual=-0.008118361 expected=-0.007137620 diff=9.807406765e-04 rel_error=1.37e-01 tol=0.000000010
+FAIL CFIR2 symmetry[15]: actual=-0.008530945 expected=-0.008118361 diff=4.125843684e-04 rel_error=5.08e-02 tol=0.000000010
+FAIL CFIR2 symmetry[16]: actual=-0.008133246 expected=-0.008530945 diff=3.976992392e-04 rel_error=4.66e-02 tol=0.000000010
+FAIL CFIR2 symmetry[17]: actual=-0.006696401 expected=-0.008133246 diff=1.436844746e-03 rel_error=1.77e-01 tol=0.000000010
+FAIL CFIR2 symmetry[18]: actual=-0.004028816 expected=-0.006696401 diff=2.667585134e-03 rel_error=3.98e-01 tol=0.000000010
+FAIL CFIR2 symmetry[19]: actual=0.000000000 expected=-0.004028816 diff=4.028816233e-03 rel_error=1.00e+00 tol=0.000000010
+FAIL CFIR2 symmetry[20]: actual=0.005438314 expected=0.000000000 diff=5.438313749e-03 rel_error=2.46e+15 tol=0.000000010
+FAIL CFIR2 symmetry[21]: actual=0.012236277 expected=0.005438314 diff=6.797963435e-03 rel_error=1.25e+00 tol=0.000000010
+FAIL CFIR2 symmetry[22]: actual=0.020237446 expected=0.012236277 diff=8.001168657e-03 rel_error=6.54e-01 tol=0.000000010
+FAIL CFIR2 symmetry[23]: actual=0.029179268 expected=0.020237446 diff=8.941821838e-03 rel_error=4.42e-01 tol=0.000000010
+FAIL CFIR2 symmetry[24]: actual=0.038703271 expected=0.029179268 diff=9.524002825e-03 rel_error=3.26e-01 tol=0.000000010
+FAIL CFIR2 symmetry[25]: actual=0.048374699 expected=0.038703271 diff=9.671428997e-03 rel_error=2.50e-01 tol=0.000000010
+FAIL CFIR2 symmetry[26]: actual=0.057710350 expected=0.048374699 diff=9.335650584e-03 rel_error=1.93e-01 tol=0.000000010
+FAIL CFIR2 symmetry[27]: actual=0.066212419 expected=0.057710350 diff=8.502069077e-03 rel_error=1.47e-01 tol=0.000000010
+FAIL CFIR2 symmetry[28]: actual=0.073405471 expected=0.066212419 diff=7.193051640e-03 rel_error=1.09e-01 tol=0.000000010
+FAIL CFIR2 symmetry[29]: actual=0.078873172 expected=0.073405471 diff=5.467700809e-03 rel_error=7.45e-02 tol=0.000000010
+FAIL CFIR2 symmetry[30]: actual=0.082291357 expected=0.078873172 diff=3.418185104e-03 rel_error=4.33e-02 tol=0.000000010
+FAIL CFIR2 symmetry[31]: actual=0.083454260 expected=0.082291357 diff=1.162903007e-03 rel_error=1.41e-02 tol=0.000000010
+PASS CFIR2 sum: actual=1.000000000 expected=1.000000000 diff=4.440892099e-16 rel_error=4.44e-16
+
+================================================================
+TEST: test_hilbert_taps
+DESC: Hilbert taps are anti-symmetric and sum to ~0
+================================================================
+PASS Hilbert center: actual=-0.000000000 expected=0.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+FAIL Hilbert antisym[1]: actual=0.023970777 expected=0.023861264 diff=1.095132789e-04 rel_error=4.59e-03 tol=0.000000010
+FAIL Hilbert antisym[2]: actual=0.045887801 expected=0.045468682 diff=4.191187540e-04 rel_error=9.22e-03 tol=0.000000010
+FAIL Hilbert antisym[3]: actual=0.063842632 expected=0.062967223 diff=8.754096398e-04 rel_error=1.39e-02 tol=0.000000010
+FAIL Hilbert antisym[4]: actual=0.076417330 expected=0.075017274 diff=1.400055767e-03 rel_error=1.87e-02 tol=0.000000010
+FAIL Hilbert antisym[5]: actual=0.082846948 expected=0.080943237 diff=1.903711071e-03 rel_error=2.35e-02 tol=0.000000010
+FAIL Hilbert antisym[6]: actual=0.083086053 expected=0.080784372 diff=2.301681463e-03 rel_error=2.85e-02 tol=0.000000010
+FAIL Hilbert antisym[7]: actual=0.077772373 expected=0.075243916 diff=2.528456568e-03 rel_error=3.36e-02 tol=0.000000010
+FAIL Hilbert antisym[8]: actual=0.068097399 expected=0.065548930 diff=2.548469180e-03 rel_error=3.89e-02 tol=0.000000010
+FAIL Hilbert antisym[9]: actual=0.055608277 expected=0.053247070 diff=2.361207328e-03 rel_error=4.43e-02 tol=0.000000010
+FAIL Hilbert antisym[10]: actual=0.041975157 expected=0.039975248 diff=1.999909194e-03 rel_error=5.00e-02 tol=0.000000010
+FAIL Hilbert antisym[11]: actual=0.028761801 expected=0.027237503 diff=1.524298223e-03 rel_error=5.60e-02 tol=0.000000010
+FAIL Hilbert antisym[12]: actual=0.017234223 expected=0.016225300 diff=1.008922234e-03 rel_error=6.22e-02 tol=0.000000010
+FAIL Hilbert antisym[13]: actual=0.008233409 expected=0.007703976 diff=5.294325594e-04 rel_error=6.87e-02 tol=0.000000010
+FAIL Hilbert antisym[14]: actual=0.002125509 expected=0.001976074 diff=1.494353415e-04 rel_error=7.56e-02 tol=0.000000010
+FAIL Hilbert antisym[15]: actual=-0.001171105 expected=-0.001081429 diff=8.967647555e-05 rel_error=8.29e-02 tol=0.000000010
+FAIL Hilbert antisym[16]: actual=-0.002095295 expected=-0.001921112 diff=1.741834969e-04 rel_error=9.07e-02 tol=0.000000010
+FAIL Hilbert antisym[17]: actual=-0.001311822 expected=-0.001193768 diff=1.180540152e-04 rel_error=9.89e-02 tol=0.000000010
+FAIL Hilbert antisym[18]: actual=0.000433682 expected=0.000391542 diff=4.213935020e-05 rel_error=1.08e-01 tol=0.000000010
+FAIL Hilbert antisym[19]: actual=0.002447226 expected=0.002191140 diff=2.560860104e-04 rel_error=1.17e-01 tol=0.000000010
+FAIL Hilbert antisym[20]: actual=0.004185831 expected=0.003715415 diff=4.704156260e-04 rel_error=1.27e-01 tol=0.000000010
+FAIL Hilbert antisym[21]: actual=0.005311860 expected=0.004672872 diff=6.389871633e-04 rel_error=1.37e-01 tol=0.000000010
+FAIL Hilbert antisym[22]: actual=0.005700387 expected=0.004969577 diff=7.308105585e-04 rel_error=1.47e-01 tol=0.000000010
+FAIL Hilbert antisym[23]: actual=0.005406738 expected=0.004672508 diff=7.342305423e-04 rel_error=1.57e-01 tol=0.000000010
+FAIL Hilbert antisym[24]: actual=0.004607867 expected=0.003951016 diff=6.568512255e-04 rel_error=1.66e-01 tol=0.000000010
+FAIL Hilbert antisym[25]: actual=0.003534178 expected=0.003012595 diff=5.215834074e-04 rel_error=1.73e-01 tol=0.000000010
+FAIL Hilbert antisym[26]: actual=0.002407537 expected=0.002047572 diff=3.599647835e-04 rel_error=1.76e-01 tol=0.000000010
+FAIL Hilbert antisym[27]: actual=0.001397182 expected=0.001192798 diff=2.043840145e-04 rel_error=1.71e-01 tol=0.000000010
+FAIL Hilbert antisym[28]: actual=0.000599307 expected=0.000518359 diff=8.094829202e-05 rel_error=1.56e-01 tol=0.000000010
+FAIL Hilbert antisym[29]: actual=0.000039661 expected=0.000035192 diff=4.468440853e-06 rel_error=1.27e-01 tol=0.000000010
+FAIL Hilbert antisym[30]: actual=-0.000306775 expected=-0.000283248 diff=2.352705486e-05 rel_error=8.31e-02 tol=0.000000010
+FAIL Hilbert antisym[31]: actual=-0.000488161 expected=-0.000474600 diff=1.356076614e-05 rel_error=2.86e-02 tol=0.000000010
+FAIL Hilbert sum: actual=0.023391621 expected=0.000000000 diff=2.339162140e-02 rel_error=0.00e+00 tol=0.000001000
+
+================================================================
+TEST: test_ciirtank_tone_selectivity
+DESC: CIIRTANK selects target tone under overlap + noise
+================================================================
+FAIL CIIRTANK selectivity: target=3.491e+02 interfere=3.479e+02
+
+================================================================
+TEST: test_ciir_noise_bounded
+DESC: CIIR output remains bounded under noise
+================================================================
+PASS CIIR noise bounded: max=0.324482
+
+================================================================
+TEST: test_dofir_step_response
+DESC: DoFIR moving-average settles to expected gain
+================================================================
+PASS DoFIR step steady: actual=1.000000000 expected=1.000000000 diff=0.000000000e+00 rel_error=0.00e+00
+
+================================================================
+TEST: test_cfir2_lpf_cut
+DESC: LPF passes low tone, attenuates high tone
+================================================================
+PASS CFIR2 LPF: low=0.7073 high=0.0001
+
+================================================================
+TEST: test_cfir2_hpf_cut
+DESC: HPF passes high tone, attenuates low tone
+================================================================
+PASS CFIR2 HPF: low=0.0001 high=0.7072
+
+================================================================
+TEST: test_cfir2_bpf_narrowband
+DESC: BPF passes in-band tone, attenuates out-of-band
+================================================================
+PASS CFIR2 BPF: in=0.7077 out=0.0012
+
+================================================================
+TEST: test_cfir2_bef_notch
+DESC: BEF (notch) attenuates in-band tone
+================================================================
+PASS CFIR2 BEF: pass=0.5300 notch=0.0008
+
+================================================================================
+RESULT: DSP REFERENCE TESTS FAILED
+================================================================================
