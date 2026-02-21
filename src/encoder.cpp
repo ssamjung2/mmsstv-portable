@@ -815,7 +815,8 @@ static void write_mmsstv_vis(sstv_encoder_t *enc, uint16_t vis_word) {
     push_segment_ms(enc, 1900, 300.0);
     push_segment_ms(enc, 1200, 30.0);
     for (int i = 0; i < 16; i++) {
-        double freq = (vis_word & 0x0001) ? 1100.0 : 1300.0;
+        /* MMSSTV: bit 1 = 1080 Hz, bit 0 = 1320 Hz */
+        double freq = (vis_word & 0x0001) ? 1080.0 : 1320.0;
         push_segment_ms(enc, freq, 30.0);
         vis_word >>= 1;
     }
@@ -1464,8 +1465,8 @@ sstv_encoder_t* sstv_encoder_create(sstv_mode_t mode, double sample_rate) {
 
     new (&enc->vco) VCO(sample_rate);
     new (&enc->vis) VISEncoder();
-    enc->vco.setFreeFreq(1100.0);
-    enc->vco.setGain(1200.0);
+    enc->vco.setFreeFreq(1080.0);  /* MMSSTV base frequency */
+    enc->vco.setGain(1220.0);       /* Span to 2300 Hz (1080 + 1220) */
     enc->vis_active = 0;
     enc->preamble_enabled = 1;
     enc->stage = 0;
@@ -1564,11 +1565,24 @@ size_t sstv_encoder_generate(sstv_encoder_t *encoder, float *samples, size_t max
                 if (fq <= 0.0) {
                     encoder->vis_active = 0;
                     encoder->stage = 2;
+                    fprintf(stderr, "[ENCODER] VIS complete, moving to stage 2 (image data)\n");
                     continue;
                 }
-                double norm = (fq - 1100.0) / 1200.0;
+                /* Normalize frequency to VCO input range: 1080-2300 Hz */
+                double norm = (fq - 1080.0) / 1220.0;
                 if (norm < 0.0) norm = 0.0;
                 if (norm > 1.0) norm = 1.0;
+                
+                static int vco_debug_count = 0;
+                static double last_fq = 0.0;
+                // Print on frequency changes or first 100 samples
+                if (vco_debug_count < 100 || fq != last_fq) {
+                    fprintf(stderr, "[ENCODER VCO] sample=%zu fq=%.1f norm=%.4f\n", 
+ encoder->samples_generated, fq, norm);
+                    vco_debug_count++;
+                    last_fq = fq;
+                }
+                
                 samples[produced++] = (float)encoder->vco.process(norm);
                 encoder->samples_generated++;
                 continue;
@@ -1578,6 +1592,8 @@ size_t sstv_encoder_generate(sstv_encoder_t *encoder, float *samples, size_t max
         }
 
         if (encoder->stage == 0 && encoder->segment_index >= encoder->segments.size()) {
+            fprintf(stderr, "[ENCODER] Stage 0 (preamble) complete → stage %d, samples_generated=%zu\n",
+                    encoder->vis_active ? 1 : 2, encoder->samples_generated);
             encoder->stage = encoder->vis_active ? 1 : 2;
             encoder->segments.clear();
             encoder->segment_index = 0;
@@ -1609,6 +1625,16 @@ size_t sstv_encoder_generate(sstv_encoder_t *encoder, float *samples, size_t max
             double norm = (fq - 1100.0) / 1200.0;
             if (norm < 0.0) norm = 0.0;
             if (norm > 1.0) norm = 1.0;
+            
+            static int seg_debug_count = 0;
+            static double last_seg_fq = 0.0;
+            if (seg_debug_count < 50 || fq != last_seg_fq) {
+                fprintf(stderr, "[ENCODER SEG] sample=%zu stage=%d fq=%.1f norm=%.4f\n",
+                        encoder->samples_generated, encoder->stage, fq, norm);
+                seg_debug_count++;
+                last_seg_fq = fq;
+            }
+            
             out = (float)encoder->vco.process(norm);
         }
         samples[produced++] = out;

@@ -170,6 +170,38 @@ int sstv_decoder_get_state(sstv_decoder_t *dec, sstv_decoder_state_t *state);
 void sstv_decoder_set_debug_level(sstv_decoder_t *dec, int level);
 
 /**
+ * Enable intermediate WAV file writing for filter analysis
+ *
+ * Writes audio samples at different stages of the processing pipeline:
+ * - before: After initial LPF, before BPF (shows raw input with anti-aliasing)
+ * - after_bpf: After bandpass filter (shows filtered signal)
+ * - after_agc: After AGC normalization (shows gain-adjusted signal)
+ * - final: After final scaling, input to tone detectors (working signal)
+ *
+ * Pass NULL for any file you don't want to create.
+ * Files are closed and finalized when decoder is freed.
+ *
+ * @param dec Decoder handle
+ * @param before_filepath Path for before-filtering WAV (or NULL)
+ * @param after_bpf_filepath Path for after-BPF WAV (or NULL)
+ * @param after_agc_filepath Path for after-AGC WAV (or NULL)
+ * @param final_filepath Path for final scaled WAV (or NULL)
+ * @return 0 on success, -1 on error
+ */
+int sstv_decoder_enable_debug_wav(sstv_decoder_t *dec,
+                                   const char *before_filepath,
+                                   const char *after_bpf_filepath,
+                                   const char *after_agc_filepath,
+                                   const char *final_filepath);
+
+/**
+ * Disable debug WAV writing and close any open files
+ *
+ * @param dec Decoder handle
+ */
+void sstv_decoder_disable_debug_wav(sstv_decoder_t *dec);
+
+/**
  * Feed a single sample (convenience wrapper)
  *
  * @param dec Decoder handle

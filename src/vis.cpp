@@ -26,6 +26,7 @@
  */
 
 #include <cstddef>
+#include <cstdio>
 
 #include "vis.h"
 
@@ -60,7 +61,13 @@ void VISEncoder::start_16bit(unsigned short code, double samplerate) {
 }
 
 double VISEncoder::get_frequency() {
-    int final_state = is_16bit ? 22 : 13;
+    int final_state = is_16bit ? 21 : 13;
+    
+    static int call_count = 0;
+    if (call_count < 5 || state >= 4) {
+        fprintf(stderr, "[VIS ENC get_frequency] call=%d state=%d final=%d samples_remaining=%d\n",
+                call_count++, state, final_state, samples_remaining);
+    }
     
     if (state >= final_state) {
         return 0.0;  // VIS complete
@@ -87,35 +94,53 @@ double VISEncoder::get_frequency() {
         }
         
         // 8-bit VIS: states 4-11 are data bits
-        // MMSSTV uses 1080/1320 Hz (not standard 1100/1300)
-        // MSB-first transmission to match MSB-first decoder accumulation
-        // bit=1 → 1080 Hz (mark), bit=0 → 1320 Hz (space)
+        // MMSSTV VIS: bit 1 = 1080 Hz (mark), bit 0 = 1320 Hz (space) per sstv.cpp:1988
+        // LSB-first transmission (bit 0 transmitted first)
         if (!is_16bit && state >= 4 && state <= 11) {
-            int bit_idx = 7 - (state - 4);  // Transmit bit 7 first
-            return (vis_code & (1 << bit_idx)) ? 1080.0 : 1320.0;
+            int bit_idx = state - 4;  // Transmit bit 0 first (LSB-first)
+            int bit_val = (vis_code & (1 << bit_idx)) ? 1 : 0;
+            double freq = bit_val ? 1080.0 : 1320.0;
+            if (bit_idx < 8) {
+                fprintf(stderr, "[VIS ENC SAMPLE] state=%d bit_idx=%d bit_val=%d freq=%.0f vis_code=0x%02x\n", 
+                        state, bit_idx, bit_val, freq, vis_code);
+            }
+            return freq;
         }
         
-        // 16-bit VIS: states 4-11 (LSB), 12 (parity), 13-20 (MSB), 21 (parity)
+        // 16-bit VIS: Two sequential 8-bit VIS codes (MMSSTV extended VIS)  
+        // States 4-11: first VIS code (0x23 extended marker)
+        // States 12-19: second VIS code (actual mode code)
+        // State 12 is just the first bit of the second VIS - no stop bit!
         if (is_16bit) {
             if (state >= 4 && state <= 11) {
-                // LSB byte (bits 0-7)
+                // First VIS code (LSB byte): bits 0-7 where bit 7 is parity
                 int bit_idx = state - 4;
-                return (vis_code & (1 << bit_idx)) ? 1300.0 : 1100.0;
+                unsigned char lsb = vis_code & 0xFF;
+                int bit_val = (lsb & (1 << bit_idx)) ? 1 : 0;
+                double freq = bit_val ? 1080.0 : 1320.0;
+                if (bit_idx < 8) {
+                    fprintf(stderr, "[VIS ENC 16bit] state=%d bit=%d val=%d freq=%.0f lsb=0x%02X\n",
+                            state, bit_idx, bit_val, freq, lsb);
+                }
+                return freq;
             }
-            if (state == 12) {
-                // Parity for LSB
-                int parity = calculate_parity(vis_code & 0xFF);
-                return parity ? 1300.0 : 1100.0;
+            if (state >= 12 && state <= 19) {
+                // Second VIS code (MSB byte): bits 0-7 where bit 7 is parity
+                // No stop bit - transitions directly from first VIS to second VIS
+                int bit_idx = state - 12;
+                unsigned char msb = (vis_code >> 8) & 0xFF;
+                int bit_val = (msb & (1 << bit_idx)) ? 1 : 0;
+                double freq = bit_val ? 1080.0 : 1320.0;
+                if (bit_idx < 8) {
+                    fprintf(stderr, "[VIS ENC 16bit] state=%d bit=%d val=%d freq=%.0f msb=0x%02X\n",
+                            state, bit_idx, bit_val, freq, msb);
+                }
+                return freq;
             }
-            if (state >= 13 && state <= 20) {
-                // MSB byte (bits 8-15)
-                int bit_idx = state - 13;
-                return ((vis_code >> 8) & (1 << bit_idx)) ? 1300.0 : 1100.0;
-            }
-            if (state == 21) {
-                // Parity for MSB
-                int parity = calculate_parity((vis_code >> 8) & 0xFF);
-                return parity ? 1300.0 : 1100.0;
+            if (state == 20) {
+                fprintf(stderr, "[VIS ENC 16bit] state=20 STOP BIT (1200 Hz)\n");
+                // Final stop bit after both VIS codes
+                return 1200.0;  // 30ms stop bit
             }
         }
         
@@ -123,6 +148,8 @@ double VISEncoder::get_frequency() {
     }
 
     state++;
+
+    //fprintf(stderr, "[VIS_ENC] state=%d final_state=%d is_16bit=%d\n", state, final_state, is_16bit);
 
     if (state == 1) {
         samples_remaining = (int)(0.010 * sample_freq);
@@ -141,7 +168,11 @@ double VISEncoder::get_frequency() {
     if (!is_16bit && state >= 4 && state <= 11) {
         samples_remaining = (int)(0.030 * sample_freq);
         int bit_idx = state - 4;
-        return (vis_code & (1 << bit_idx)) ? 1300.0 : 1100.0;
+        int bit_val = (vis_code & (1 << bit_idx)) ? 1 : 0;
+        double freq = bit_val ? 1080.0 : 1320.0;  /* MMSSTV: bit 1 = 1080 Hz */
+        fprintf(stderr, "[VIS ENC TRANSITION] state=%d→next bit_idx=%d bit_val=%d freq=%.0f vis_code=0x%02x\n",
+                state, bit_idx, bit_val, freq, vis_code);
+        return freq;
     }
     
     // 16-bit VIS
@@ -150,25 +181,25 @@ double VISEncoder::get_frequency() {
             // LSB byte
             samples_remaining = (int)(0.030 * sample_freq);
             int bit_idx = state - 4;
-            return (vis_code & (1 << bit_idx)) ? 1300.0 : 1100.0;
+            return (vis_code & (1 << bit_idx)) ? 1080.0 : 1320.0;  /* MMSSTV */
         }
         if (state == 12) {
             // Parity for LSB
             samples_remaining = (int)(0.030 * sample_freq);
             int parity = calculate_parity(vis_code & 0xFF);
-            return parity ? 1300.0 : 1100.0;
+            return parity ? 1080.0 : 1320.0;  /* MMSSTV */
         }
         if (state >= 13 && state <= 20) {
             // MSB byte
             samples_remaining = (int)(0.030 * sample_freq);
             int bit_idx = state - 13;
-            return ((vis_code >> 8) & (1 << bit_idx)) ? 1300.0 : 1100.0;
+            return ((vis_code >> 8) & (1 << bit_idx)) ? 1080.0 : 1320.0;  /* MMSSTV */
         }
         if (state == 21) {
             // Parity for MSB
             samples_remaining = (int)(0.030 * sample_freq);
             int parity = calculate_parity((vis_code >> 8) & 0xFF);
-            return parity ? 1300.0 : 1100.0;
+            return parity ? 1080.0 : 1320.0;  /* MMSSTV */
         }
     }
     

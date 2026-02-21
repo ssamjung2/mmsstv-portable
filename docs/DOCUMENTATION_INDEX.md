@@ -1,12 +1,26 @@
-# MMSSTV Encoder Library - Documentation Index
+# MMSSTV Portable Library - Documentation Index
 
-**Project**: mmsstv-portable (SSTV Encoder-Only Library)  
-**Date**: January 30, 2026  
-**Status**: ✅ ALL PHASES COMPLETE - Phase 5 Validation & Testing - Production Ready
+**Project**: mmsstv-portable (SSTV Encoder + Decoder Library)  
+**Date**: February 19, 2026  
+**Status**: 🔄 Phase B - RX Decoder Implementation In Progress
 
 ---
 
 ## 📖 Documentation Files (Read in Order)
+
+### 🎯 **NEW** - Decoder Architecture Baseline
+**File**: [`DECODER_ARCHITECTURE_BASELINE.md`](DECODER_ARCHITECTURE_BASELINE.md)
+- **Purpose**: Engineering baseline for RX decoder implementation
+- **Contents**:
+  - Complete audio processing pipeline architecture
+  - MMSSTV frequency parameters (1080/1320 Hz discovery)
+  - Filter specifications (IIR, LPF, BPF, AGC)
+  - Timing & sampling architecture
+  - Current implementation status (BPF/AGC disabled)
+  - Production recommendations
+  - Test validation results
+- **Length**: ~900 lines
+- **Best For**: Understanding decoder architecture and current baseline
 
 ### 🚀 Start Here - Session Handoff
 **File**: [`SESSION_HANDOFF_SUMMARY.md`](SESSION_HANDOFF_SUMMARY.md)
