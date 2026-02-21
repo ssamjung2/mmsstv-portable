@@ -1,5 +1,7 @@
 #!/bin/bash
 # Test all authoritative alt_color_bars files
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "${SCRIPT_DIR}/.."
 
 TEST_DIR="tests/audio"
 BINARY="./bin/test_vis_decode_wav"

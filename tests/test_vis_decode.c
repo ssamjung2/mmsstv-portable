@@ -3,12 +3,12 @@
  * 
  * Verifies the decoder can correctly identify SSTV modes from VIS codes.
  * 
- * VIS code structure:
+ * VIS code structure (MMSSTV standard):
  *   - 1900 Hz leader tone (300ms)
  *   - Break (1200 Hz, 10ms)
  *   - VIS start bit (1200 Hz, 30ms)
- *   - 7 data bits (LSB first): 1100 Hz = 1, 1300 Hz = 0 (30ms each)
- *   - 1 parity bit (1100/1300 Hz, 30ms)
+ *   - 7 data bits (LSB first): 1080 Hz = 1, 1320 Hz = 0 (30ms each)
+ *   - 1 parity bit (odd parity): 1080/1320 Hz (30ms)
  *   - Stop bit (1200 Hz, 30ms)
  * 
  * Total VIS sequence duration: ~600ms
@@ -153,19 +153,20 @@ static int build_vis_samples(sample_buffer_t *buf, uint8_t vis_code) {
     if (sample_buffer_append_tone(buf, 1200.0, 0.010, 0.8) != 0) return -1;
     if (sample_buffer_append_tone(buf, 1200.0, 0.030, 0.8) != 0) return -1;
 
-    /* 7 data bits (LSB first) */
+    /* 7 data bits (LSB first) - MMSSTV standard: 1080 Hz = 1, 1320 Hz = 0 */
     for (int bit = 0; bit < 7; bit++) {
         int bit_value = (vis_code >> bit) & 1;
-        double freq = bit_value ? 1100.0 : 1300.0;
+        double freq = bit_value ? 1080.0 : 1320.0;
         if (sample_buffer_append_tone(buf, freq, 0.030, 0.8) != 0) return -1;
     }
 
-    /* Parity bit (even parity) */
+    /* Parity bit (odd parity for MMSSTV) - parity bit = popcount of data bits */
     int parity = 0;
     for (int bit = 0; bit < 7; bit++) {
         if ((vis_code >> bit) & 1) parity ^= 1;
     }
-    if (sample_buffer_append_tone(buf, parity ? 1100.0 : 1300.0, 0.030, 0.8) != 0) return -1;
+    /* MMSSTV odd parity: parity bit equals the popcount & 1 of the data bits */
+    if (sample_buffer_append_tone(buf, parity ? 1080.0 : 1320.0, 0.030, 0.8) != 0) return -1;
 
     /* Stop bit (1200 Hz) */
     if (sample_buffer_append_tone(buf, 1200.0, 0.030, 0.8) != 0) return -1;

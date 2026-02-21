@@ -1,9 +1,11 @@
 #!/bin/bash
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "${SCRIPT_DIR}/.."
 
 # Comprehensive test for test_modes WAV files
 # Tests VIS decoding and provides diagnostic information
 
-TEST_DIR="/Users/ssamjung/Desktop/WIP/mmsstv-portable/tests/test_modes"
+TEST_DIR="tests/test_modes"
 
 echo "VIS Decoder Test - test_modes Directory"
 echo "========================================"

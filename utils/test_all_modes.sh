@@ -1,4 +1,6 @@
 #!/bin/bash
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "${SCRIPT_DIR}/.."
 
 # Test all mode WAV files in tests/test_modes/
 # Maps filename to expected VIS code
@@ -58,7 +60,7 @@ get_expected_vis() {
     esac
 }
 
-TEST_DIR="/Users/ssamjung/Desktop/WIP/mmsstv-portable/tests/test_modes"
+TEST_DIR="tests/test_modes"
 
 for wav_file in "$TEST_DIR"/*.wav; do
     filename=$(basename "$wav_file" .wav)

@@ -1,6 +1,8 @@
 # Build directories
 build/
 cmake-build-*/
+/tests/test_modes/
+utils/test_vis_output
 
 # Generated files
 *.o

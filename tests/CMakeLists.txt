@@ -23,6 +23,10 @@ add_executable(test_vis_decode_wav test_vis_decode_wav.c)
 target_include_directories(test_vis_decode_wav PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(test_vis_decode_wav PRIVATE sstv_decoder_static m)
 
+add_executable(test_hf_impairments test_hf_impairments.cpp ../src/SpectralSubtractionDNR.cpp)
+target_include_directories(test_hf_impairments PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_hf_impairments PRIVATE sstv_encoder_static)
+
 # Add test target
 add_test(NAME vis_codes COMMAND $<TARGET_FILE:test_vis_codes>)
 add_test(NAME encode_smoke COMMAND $<TARGET_FILE:test_encode_smoke>)

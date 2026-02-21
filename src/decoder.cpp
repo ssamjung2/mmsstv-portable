@@ -17,6 +17,56 @@
 #include "sstv_decoder.h"
 #include "dsp_filters.h"
 
+/* === WAV FILE HELPERS === */
+static void write_u16_le(FILE *f, uint16_t val) {
+    uint8_t b[2] = { (uint8_t)(val & 0xFF), (uint8_t)((val >> 8) & 0xFF) };
+    fwrite(b, 1, 2, f);
+}
+
+static void write_u32_le(FILE *f, uint32_t val) {
+    uint8_t b[4] = { (uint8_t)(val & 0xFF), (uint8_t)((val >> 8) & 0xFF),
+                     (uint8_t)((val >> 16) & 0xFF), (uint8_t)((val >> 24) & 0xFF) };
+    fwrite(b, 1, 4, f);
+}
+
+static void write_wav_header_placeholder(FILE *f, uint32_t sample_rate) {
+    /* Write header with 0 samples, will be updated on close */
+    fwrite("RIFF", 1, 4, f);
+    write_u32_le(f, 0);  /* RIFF size (will update) */
+    fwrite("WAVE", 1, 4, f);
+    fwrite("fmt ", 1, 4, f);
+    write_u32_le(f, 16);  /* PCM chunk size */
+    write_u16_le(f, 1);   /* PCM format */
+    write_u16_le(f, 1);   /* Mono */
+    write_u32_le(f, sample_rate);
+    write_u32_le(f, sample_rate * 2);  /* Byte rate */
+    write_u16_le(f, 2);   /* Block align */
+    write_u16_le(f, 16);  /* Bits per sample */
+    fwrite("data", 1, 4, f);
+    write_u32_le(f, 0);  /* Data size (will update) */
+}
+
+static void update_wav_header(FILE *f, uint32_t sample_rate, uint32_t num_samples) {
+    uint32_t data_bytes = num_samples * sizeof(int16_t);
+    uint32_t riff_size = 36 + data_bytes;
+    
+    /* Update RIFF size */
+    fseek(f, 4, SEEK_SET);
+    write_u32_le(f, riff_size);
+    
+    /* Update data chunk size */
+    fseek(f, 40, SEEK_SET);
+    write_u32_le(f, data_bytes);
+}
+
+static void write_sample_to_wav(FILE *f, double sample) {
+    /* Clamp and convert double to int16 */
+    if (sample > 32767.0) sample = 32767.0;
+    if (sample < -32768.0) sample = -32768.0;
+    int16_t pcm = (int16_t)sample;
+    write_u16_le(f, (uint16_t)pcm);
+}
+
 /* === SYNC DETECTOR STATE MACHINE === */
 typedef enum {
     SYNC_IDLE = 0,           /* Waiting for sync pulse */
@@ -25,6 +75,19 @@ typedef enum {
     SYNC_VIS_DECODING = 3,   /* Decoding VIS bits */
     SYNC_DATA_WAIT = 4       /* Image data coming */
 } sync_state_t;
+
+/* === IMAGE DECODER STATE MACHINE === */
+typedef enum {
+    IMAGE_IDLE = 0,          /* Not decoding image */
+    IMAGE_SYNC_WAIT = 1,     /* Waiting for line sync pulse */
+    IMAGE_DECODE_R = 2,      /* Decoding red channel */
+    IMAGE_DECODE_G = 3,      /* Decoding green channel */
+    IMAGE_DECODE_B = 4,      /* Decoding blue channel */
+    IMAGE_DECODE_Y = 5,      /* Decoding luminance (Y) */
+    IMAGE_DECODE_RY = 6,     /* Decoding R-Y chroma */
+    IMAGE_DECODE_BY = 7,     /* Decoding B-Y chroma */
+    IMAGE_COMPLETE = 8       /* Image fully decoded */
+} image_decode_state_t;
 
 /* === VIS DECODER === */
 typedef struct {
@@ -70,6 +133,16 @@ typedef struct {
     int current_line;        /* Current line being filled */
     int current_col;         /* Current column in line */
 } image_buffer_t;
+
+/* === IMAGE DECODER STATE === */
+typedef struct {
+    image_decode_state_t state;  /* Current decode state */
+    int sample_counter;          /* Sample counter for timing */
+    double samples_per_pixel;    /* Samples per pixel (from mode timing) */
+    int current_channel;         /* Current color channel (0=R, 1=G, 2=B or Y) */
+    double freq_accum;           /* Accumulated frequency for averaging */
+    int freq_samples;            /* Number of samples accumulated */
+} image_decoder_t;
 
 /* CSYNCINT: Leader interval tracker (MMSSTV parity) */
 #define MSYNCLINE 8
@@ -122,9 +195,13 @@ struct sstv_decoder_s {
     /* === IMAGE BUFFER === */
     image_buffer_t image_buf;
     
+    /* === IMAGE DECODER === */
+    image_decoder_t img_dec;
+    
     /* === SYNC TRACKING === */
     int sync_mode;                   /* MMSSTV sync state (m_SyncMode) */
     int sync_time;                   /* MMSSTV sync timer (m_SyncTime) */
+    int leader_drop_count;           /* Count samples during brief leader interruptions */
     int vis_data;                    /* MMSSTV VIS accumulator (m_VisData) */
     int vis_cnt;                     /* MMSSTV VIS bit count (m_VisCnt, 7 for data bits) */
     int vis_parity_pending;          /* Waiting to decode parity bit */
@@ -141,6 +218,13 @@ struct sstv_decoder_s {
     
     /* === DEBUGGING === */
     int debug_level;                 /* 0=off, 1=errors, 2=info, 3=verbose */
+    
+    /* === DEBUG WAV OUTPUT === */
+    FILE *debug_wav_before;          /* Before filtering (after LPF) */
+    FILE *debug_wav_after_bpf;       /* After BPF */
+    FILE *debug_wav_after_agc;       /* After AGC */
+    FILE *debug_wav_final;           /* After final scaling */
+    uint32_t debug_wav_sample_count; /* Number of samples written */
 };
 
 /* === VIS CODE MAPPING === */
@@ -217,12 +301,16 @@ static int decoder_try_vis_from_buffer(sstv_decoder_t *dec, sstv_mode_t *mode_ou
 static int vis_parity_ok(uint8_t vis_code);
 static sstv_mode_t vis_code_to_mode(uint8_t vis_code, int is_extended);
 static double agc_calculate_gain(sstv_decoder_t *dec, double vis_energy);
+static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode);
+static int frequency_to_color(double freq_hz);
+static void decoder_store_pixel(sstv_decoder_t *dec, int color_value, int channel);
 
 static void level_agc_init(level_agc_t *lvl, double sample_rate);
 static void level_agc_do(level_agc_t *lvl, double d);
 static void level_agc_fix(level_agc_t *lvl);
 static double level_agc_apply(level_agc_t *lvl, double d);
 static void decoder_set_sense_levels(sstv_decoder_t *dec);
+static void decoder_process_image_sample(sstv_decoder_t *dec, double freq_11, double freq_13, double freq_19);
 
 sstv_decoder_t* sstv_decoder_create(double sample_rate) {
     if (sample_rate <= 0.0) {
@@ -238,6 +326,13 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
     dec->vis_enabled = 1;
     dec->last_status = SSTV_RX_NEED_MORE;
     dec->debug_level = 0;
+    
+    /* Initialize debug WAV files to NULL */
+    dec->debug_wav_before = NULL;
+    dec->debug_wav_after_bpf = NULL;
+    dec->debug_wav_after_agc = NULL;
+    dec->debug_wav_final = NULL;
+    dec->debug_wav_sample_count = 0;
     
     /* Initialize AGC */
     dec->agc_mode = SSTV_AGC_AUTO;   /* Default to AUTO mode (kept for API) */
@@ -255,11 +350,11 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
         dec->vis.buf_pos = 0;
         dec->vis.buffering = 0;
     
-    /* Initialize DSP filters (MMSSTV parity) */
-    dec->iir11.SetFreq(1080.0, sample_rate, 80.0);
-    dec->iir12.SetFreq(1200.0, sample_rate, 100.0);
-    dec->iir13.SetFreq(1320.0, sample_rate, 80.0);
-    dec->iir19.SetFreq(1900.0, sample_rate, 100.0);
+    /* Initialize DSP filters (MMSSTV frequencies: 1080/1320 Hz per original implementation) */
+    dec->iir11.SetFreq(1080.0, sample_rate, 80.0);  /* Mark tone - matches MMSSTV sstv.cpp:1772 */
+    dec->iir12.SetFreq(1200.0, sample_rate, 100.0); /* Sync tone */
+    dec->iir13.SetFreq(1320.0, sample_rate, 80.0);  /* Space tone - matches MMSSTV sstv.cpp:1774 */
+    dec->iir19.SetFreq(1900.0, sample_rate, 100.0); /* Leader tone */
     dec->lpf11.MakeIIR(50.0, sample_rate, 2, 0, 0);
     dec->lpf12.MakeIIR(50.0, sample_rate, 2, 0, 0);
     dec->lpf13.MakeIIR(50.0, sample_rate, 2, 0, 0);
@@ -271,7 +366,8 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
     if (dec->bpftap < 1) dec->bpftap = 1;
     dec->hbpf.assign(dec->bpftap + 1, 0.0);
     dec->hbpfs.assign(dec->bpftap + 1, 0.0);
-    sstv_dsp::MakeFilter(dec->hbpf.data(), dec->bpftap, sstv_dsp::kFfBPF, sample_rate, 1100.0, 2600.0, 20.0, 1.0);
+    /* MMSSTV BPF: HBPF for narrow (1080-2600 Hz for VIS/data), HBPFS for wide (400-2500 Hz for initial sync) */
+    sstv_dsp::MakeFilter(dec->hbpf.data(), dec->bpftap, sstv_dsp::kFfBPF, sample_rate, 1080.0, 2600.0, 20.0, 1.0);
     sstv_dsp::MakeFilter(dec->hbpfs.data(), dec->bpftap, sstv_dsp::kFfBPF, sample_rate, 400.0, 2500.0, 20.0, 1.0);
     dec->bpf.Create(dec->bpftap);
     
@@ -293,6 +389,24 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
 
 void sstv_decoder_free(sstv_decoder_t *dec) {
     if (dec) {
+        /* Close and finalize any open debug WAV files */
+        if (dec->debug_wav_before) {
+            update_wav_header(dec->debug_wav_before, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+            fclose(dec->debug_wav_before);
+        }
+        if (dec->debug_wav_after_bpf) {
+            update_wav_header(dec->debug_wav_after_bpf, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+            fclose(dec->debug_wav_after_bpf);
+        }
+        if (dec->debug_wav_after_agc) {
+            update_wav_header(dec->debug_wav_after_agc, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+            fclose(dec->debug_wav_after_agc);
+        }
+        if (dec->debug_wav_final) {
+            update_wav_header(dec->debug_wav_final, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+            fclose(dec->debug_wav_final);
+        }
+        
         if (dec->image_buf.pixels) {
             free(dec->image_buf.pixels);
         }
@@ -312,6 +426,80 @@ void sstv_decoder_reset(sstv_decoder_t *dec) {
     decoder_reset_state(dec);
     dec->mode_hint = SSTV_MODE_COUNT;
     dec->last_status = SSTV_RX_NEED_MORE;
+}
+
+int sstv_decoder_enable_debug_wav(sstv_decoder_t *dec,
+                                   const char *before_filepath,
+                                   const char *after_bpf_filepath,
+                                   const char *after_agc_filepath,
+                                   const char *final_filepath) {
+    if (!dec) return -1;
+    
+    /* Close any existing debug WAV files first */
+    sstv_decoder_disable_debug_wav(dec);
+    
+    /* Open requested files and write headers */
+    if (before_filepath) {
+        dec->debug_wav_before = fopen(before_filepath, "wb");
+        if (dec->debug_wav_before) {
+            write_wav_header_placeholder(dec->debug_wav_before, (uint32_t)dec->sample_rate);
+        }
+    }
+    
+    if (after_bpf_filepath) {
+        dec->debug_wav_after_bpf = fopen(after_bpf_filepath, "wb");
+        if (dec->debug_wav_after_bpf) {
+            write_wav_header_placeholder(dec->debug_wav_after_bpf, (uint32_t)dec->sample_rate);
+        }
+    }
+    
+    if (after_agc_filepath) {
+        dec->debug_wav_after_agc = fopen(after_agc_filepath, "wb");
+        if (dec->debug_wav_after_agc) {
+            write_wav_header_placeholder(dec->debug_wav_after_agc, (uint32_t)dec->sample_rate);
+        }
+    }
+    
+    if (final_filepath) {
+        dec->debug_wav_final = fopen(final_filepath, "wb");
+        if (dec->debug_wav_final) {
+            write_wav_header_placeholder(dec->debug_wav_final, (uint32_t)dec->sample_rate);
+        }
+    }
+    
+    dec->debug_wav_sample_count = 0;
+    return 0;
+}
+
+void sstv_decoder_disable_debug_wav(sstv_decoder_t *dec) {
+    if (!dec) return;
+    
+    /* Close and finalize any open files */
+    if (dec->debug_wav_before) {
+        update_wav_header(dec->debug_wav_before, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+        fclose(dec->debug_wav_before);
+        dec->debug_wav_before = NULL;
+    }
+    
+    if (dec->debug_wav_after_bpf) {
+        update_wav_header(dec->debug_wav_after_bpf, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+        fclose(dec->debug_wav_after_bpf);
+        dec->debug_wav_after_bpf = NULL;
+    }
+    
+    if (dec->debug_wav_after_agc) {
+        update_wav_header(dec->debug_wav_after_agc, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+        fclose(dec->debug_wav_after_agc);
+        dec->debug_wav_after_agc = NULL;
+    }
+    
+    if (dec->debug_wav_final) {
+        update_wav_header(dec->debug_wav_final, (uint32_t)dec->sample_rate, dec->debug_wav_sample_count);
+        fclose(dec->debug_wav_final);
+        dec->debug_wav_final = NULL;
+    }
+    
+    dec->debug_wav_sample_count = 0;
 }
 
 /* === INTERNAL HELPERS === */
@@ -500,6 +688,7 @@ static void decoder_reset_state(sstv_decoder_t *dec) {
     dec->sync_state = SYNC_IDLE;
     dec->sync_mode = 0;
     dec->sync_time = 0;
+    dec->leader_drop_count = 0;
     dec->vis_data = 0;
     dec->vis_cnt = 0;
     dec->vis_extended = 0;
@@ -541,6 +730,14 @@ static void decoder_reset_state(sstv_decoder_t *dec) {
     dec->image_buf.height = 0;
     dec->image_buf.current_line = 0;
     dec->image_buf.current_col = 0;
+    
+    /* Reset image decoder state */
+    dec->img_dec.state = IMAGE_IDLE;
+    dec->img_dec.sample_counter = 0;
+    dec->img_dec.samples_per_pixel = 1.0;
+    dec->img_dec.current_channel = 0;
+    dec->img_dec.freq_accum = 0.0;
+    dec->img_dec.freq_samples = 0;
 }
 
 /**
@@ -569,7 +766,13 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
     double d = (sample + dec->prev_sample) * 0.5;
     dec->prev_sample = sample;
 
+    /* Debug WAV: Write BEFORE filtering (after LPF only) */
+    if (dec->debug_wav_before) {
+        write_sample_to_wav(dec->debug_wav_before, d);
+    }
+
     /* BPF (MMSSTV: HBPFS before sync, HBPF after) */
+    #if 1
     if (dec->use_bpf) {
         if (dec->sync_mode >= 3 && !dec->hbpf.empty()) {
             d = dec->bpf.Do(d, dec->hbpf.data());
@@ -577,15 +780,45 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
             d = dec->bpf.Do(d, dec->hbpfs.data());
         }
     }
+    #endif
+
+    /* Debug WAV: Write AFTER BPF */
+    if (dec->debug_wav_after_bpf) {
+        write_sample_to_wav(dec->debug_wav_after_bpf, d);
+    }
 
     /* AGC (MMSSTV) */
+    #if 1
     level_agc_do(&dec->lvl, d);
     level_agc_fix(&dec->lvl);
     double ad = level_agc_apply(&dec->lvl, d);
+    #else
+    double ad = d;
+    #endif
+
+    /* Debug WAV: Write AFTER AGC (clean normalized signal) */
+    if (dec->debug_wav_after_agc) {
+        write_sample_to_wav(dec->debug_wav_after_agc, ad);
+    }
 
     d = ad * 32.0;
     if (d > 16384.0) d = 16384.0;
     if (d < -16384.0) d = -16384.0;
+
+    /* Debug WAV: Write FINAL clean signal
+     * Note: 'd' is now scaled ×32 and clamped for tone detector operation (±16384 range).
+     * This causes severe clipping for typical signals and is NOT suitable for audio playback.
+     * For debug WAV output, we write the clean AGC output 'ad' at full scale instead.
+     * This lets you hear the actual signal quality going into tone detection. */
+    if (dec->debug_wav_final) {
+        write_sample_to_wav(dec->debug_wav_final, ad * 2.0);
+    }
+    
+    /* Increment sample count if any debug WAV is active */
+    if (dec->debug_wav_before || dec->debug_wav_after_bpf || 
+        dec->debug_wav_after_agc || dec->debug_wav_final) {
+        dec->debug_wav_sample_count++;
+    }
 
     /* Tone detectors + 50 Hz LPF (MMSSTV) */
     double d12 = dec->iir12.Do(d);
@@ -595,6 +828,22 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
     double d19 = dec->iir19.Do(d);
     if (d19 < 0.0) d19 = -d19;
     d19 = dec->lpf19.Do(d19);
+    
+    /* Additional tone detectors for image data */
+    double d11 = dec->iir11.Do(d);
+    if (d11 < 0.0) d11 = -d11;
+    d11 = dec->lpf11.Do(d11);
+
+    double d13 = dec->iir13.Do(d);
+    if (d13 < 0.0) d13 = -d13;
+    d13 = dec->lpf13.Do(d13);
+    
+    /* If we're in image decoding mode, process the sample for image data */
+    if (dec->sync_state == SYNC_DATA_WAIT && dec->image_buf.pixels) {
+        if (dec->img_dec.state != IMAGE_COMPLETE) {
+            decoder_process_image_sample(dec, d11, d13, d19);
+        }
+    }
 
     if (dec->debug_level >= 3) {
         static int sync_log_counter = 0;
@@ -614,52 +863,62 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
     /* Sync/VIS state machine (MMSSTV parity with leader tracking) */
     switch (dec->sync_mode) {
         case 0:
-            /* MMSSTV: Check for leader using sint1 (primary tracker) */
+            /* MMSSTV: Wait for VIS START BIT (1200 Hz, 30ms) - NOT the leader!
+             * The VIS leaders (300ms+10ms+300ms @ 1900/1200/1900 Hz) are ignored.
+             * Detection begins when the 30ms START BIT at 1200 Hz appears.
+             * 
+             * CRITICAL: Must not trigger on the 10ms VIS break (also at 1200 Hz)
+             * Solution: Require sustained 1200 Hz for 12ms before starting validation
+             */
             if ((d12 > d19) && (d12 > dec->s_lvl) && ((d12 - d19) >= dec->s_lvl)) {
-                /* Track sync peak */
-                sync_tracker_max(&dec->sint2, (int)d12);
-                sync_tracker_trig(&dec->sint1, (int)d12);
-                
-                if (dec->debug_level >= 2) {
-                    fprintf(stderr, "[SYNC] Leader detected (mode 0→1)\n");
+                /* 1200 Hz detected - accumulate samples */
+                if (dec->sync_time == 0) {
+                    /* First detection - start counter */
+                    dec->sync_time = (int)(12.0 * dec->sample_rate / 1000.0);  /* 12ms threshold */
+                } else {
+                    dec->sync_time--;
+                    if (!dec->sync_time) {
+                        /* Sustained for 12ms - this is likely the START BIT, not the break */
+                        if (dec->debug_level >= 2) {
+                            fprintf(stderr, "[SYNC] VIS start bit detected (sustained 1200 Hz), validating (mode 0→1)\n");
+                        }
+                        dec->sync_mode = 1;
+                        dec->sync_time = (int)(15.0 * dec->sample_rate / 1000.0);  /* 15ms validation */
+                        dec->sync_state = SYNC_DETECTED;
+                        sync_tracker_init(&dec->sint1);
+                    }
                 }
-                dec->sync_mode = 1;
-                dec->sync_time = (int)(15.0 * dec->sample_rate / 1000.0);
-                dec->sync_state = SYNC_DETECTED;
+            } else {
+                /* 1200 Hz lost - reset counter */
+                dec->sync_time = 0;
             }
             break;
         case 1:
-            /* MMSSTV: Track leader peaks during 15 ms validation window */
+            /* MMSSTV: Validate START BIT continues for 15ms */
             if ((d12 > d19) && (d12 > dec->s_lvl) && ((d12 - d19) >= dec->s_lvl)) {
-                /* Continue tracking peak */
-                sync_tracker_max(&dec->sint1, (int)d12);
-                sync_tracker_max(&dec->sint2, (int)d12);
-                
+                /* Start bit still strong */
                 dec->sync_time--;
                 if (!dec->sync_time) {
-                    /* Leader validated, proceed to VIS decode */
+                    /* Start bit validated for 15ms - now wait 30ms more before first sample */
                     if (dec->debug_level >= 2) {
-                        fprintf(stderr, "[SYNC] Leader validated, entering VIS decode (mode 1→2)\n");
+                        fprintf(stderr, "[SYNC] Start bit validated, entering VIS decode (mode 1→2)\n");
                     }
                     dec->sync_mode = 2;
-                    /* Wait for VIS start bit (30ms @ 1200 Hz) + sample at middle of first data bit */
-                    dec->sync_time = (int)(45.0 * dec->sample_rate / 1000.0);
+                    dec->sync_time = (int)(30.0 * dec->sample_rate / 1000.0);  /* 30ms per bit */
                     dec->vis_data = 0;
-                    dec->vis_cnt = 7;  /* 7 data bits (LSB-first) + parity */
+                    dec->vis_cnt = 8;  /* 8 bits to decode */
                     dec->vis_parity_pending = 0;
                     dec->vis_extended = 0;
                     dec->sync_state = SYNC_VIS_DECODING;
                 }
-            } else {
-                /* Check if leader interval is valid before resetting */
-                int leader_valid = sync_tracker_start(&dec->sint1, dec->sample_rate);
-                if (!leader_valid) {
-                    if (dec->debug_level >= 2) {
-                        fprintf(stderr, "[SYNC] Leader lost, invalid interval (mode 1→0)\n");
-                    }
-                    dec->sync_mode = 0;
-                    dec->sync_state = SYNC_IDLE;
+            }
+            else {
+                /* Start bit dropped - reset */
+                if (dec->debug_level >= 2) {
+                    fprintf(stderr, "[SYNC] Start bit dropped during validation (mode 1→0)\n");
                 }
+                dec->sync_mode = 0;
+                dec->sync_state = SYNC_IDLE;
             }
             break;
         case 3:
@@ -670,18 +929,12 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
             break;
         case 2:
         case 9: {
-            double d11 = dec->iir11.Do(d);
-            if (d11 < 0.0) d11 = -d11;
-            d11 = dec->lpf11.Do(d11);
-
-            double d13 = dec->iir13.Do(d);
-            if (d13 < 0.0) d13 = -d13;
-            d13 = dec->lpf13.Do(d13);
+            /* Use d11, d13 already computed at outer scope - don't run filters twice! */
 
             dec->sync_time--;
             if (!dec->sync_time) {
-                if (dec->debug_level >= 3) {
-                    fprintf(stderr, "[VIS] d11=%.2f d13=%.2f d19=%.2f cnt=%d data=0x%02x\n",
+                if (dec->debug_level >= 2) {
+                    fprintf(stderr, "[VIS] SAMPLE: d11=%.2f d13=%.2f d19=%.2f cnt=%d data=0x%02x\n",
                             d11, d13, d19, dec->vis_cnt, dec->vis_data & 0xFF);
                 }
                 /* Check if VIS tones are discriminable:
@@ -698,26 +951,48 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
                 } else {
                     dec->sync_time = (int)(30.0 * dec->sample_rate / 1000.0);
                     
-                    if (dec->vis_parity_pending) {
-                        /* Decode parity bit: even=1300hz (0), odd=1100hz (1) */
-                        int parity_bit = (d11 > d13) ? 1 : 0;
-                        int calculated_parity = __builtin_popcount(dec->vis_data) & 1;  /* odd=1, even=0 */
+                    /* VIS decode: LSB-first to match encoder
+                     * Encoder transmits bit 0 first, bit 7 last
+                     * vis_cnt counts down from 8 to 0 (8 bits total)
+                     * 
+                     * Bit polarity: d11 > d13 (1080 Hz) = bit 1, d13 > d11 (1320 Hz) = bit 0
+                     */
+                    int bit_pos = 8 - dec->vis_cnt;  /* Position 0 to 7 */
+                    if (d11 > d13) {
+                        /* 1080 Hz detected = bit 1 */
+                        dec->vis_data |= (1 << bit_pos);
+                    }
+                    /* else: 1320 Hz detected = bit 0 (default) */
+                    
+                    if (dec->debug_level >= 3) {
+                        fprintf(stderr, "[VIS] bit %d: %s → vis_data=0x%02x (d11=%.0f d13=%.0f)\n",
+                                8 - dec->vis_cnt, (d11 > d13) ? "1" : "0", 
+                                (uint8_t)dec->vis_data, d11, d13);
+                    }
+                    
+                    dec->vis_cnt--;
+                    if (!dec->vis_cnt) {
+                        /* All 8 bits decoded (7 data + 1 parity) */
+                        int parity_bit = (dec->vis_data >> 7) & 1;  /* MSB is parity */
+                        int data_bits = dec->vis_data & 0x7F;  /* Lower 7 bits are data */
+                        int calculated_parity = __builtin_popcount(data_bits) & 1;
                         
                         if (dec->debug_level >= 2) {
-                            fprintf(stderr, "[VIS] 7 data bits + parity: 0x%02x parity_rx=%d calc=%d %s\n",
-                                    (uint8_t)dec->vis_data, parity_bit, calculated_parity,
+                            fprintf(stderr, "[VIS] Complete: 0x%02x data=0x%02x parity_rx=%d calc=%d %s\n",
+                                    (uint8_t)dec->vis_data, data_bits, parity_bit, calculated_parity,
                                     (parity_bit == calculated_parity) ? "OK" : "FAIL");
                         }
                         
                         /* Accept VIS even if parity fails (for robustness) */
                         if (dec->sync_mode == 2) {
-                            if (dec->vis_data == 0x23) {
+                            if (data_bits == 0x23) {
+                                /* Extended VIS code follows */
                                 dec->sync_mode = 9;
                                 dec->vis_data = 0;
-                                dec->vis_cnt = 7;
-                                dec->vis_parity_pending = 0;
+                                dec->vis_cnt = 8;
                                 dec->vis_extended = 1;
                             } else {
+                                /* Look up mode using full VIS code (including parity bit) */
                                 sstv_mode_t mode = vis_code_to_mode((uint8_t)dec->vis_data, 0);
                                 if (mode != SSTV_MODE_COUNT) {
                                     dec->detected_mode = mode;
@@ -731,7 +1006,7 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
                                 }
                                 dec->sync_mode = 0;
                             }
-                        } else {
+                        } else {  /* sync_mode == 9: extended VIS */
                             sstv_mode_t mode = vis_code_to_mode((uint8_t)dec->vis_data, 1);
                             if (mode != SSTV_MODE_COUNT) {
                                 dec->detected_mode = mode;
@@ -742,78 +1017,6 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
                                 }
                             }
                             dec->sync_mode = 0;
-                        }
-                    } else {
-                        /* Decode data bits: VIS bits are transmitted LSB-first (slowrx-cli approach)
-                         * Bits[0..6] accumulate in positions, then Bit[7] is parity
-                         * vis_cnt goes from 7 down to 0
-                         * Position = 7 - vis_cnt (so first bit at pos 0, last at pos 6)
-                         */
-                        int bit_pos = 7 - dec->vis_cnt;  /* 0 to 6 for data bits, then 7 for parity */
-                        if (bit_pos < 7) {
-                            /* Data bits 0-6 */
-                            int bit_val = (d11 > d13) ? 1 : 0;
-                            if (bit_val) dec->vis_data |= (1 << bit_pos);
-                            if (dec->debug_level >= 3) {
-                                fprintf(stderr, "[VIS] bit[%d]=%d vis_data=0x%02x\n",
-                                        bit_pos, bit_val, (uint8_t)dec->vis_data);
-                            }
-                            dec->vis_cnt--;
-                            if (!dec->vis_cnt) {
-                                /* All 7 data bits decoded, next is parity */
-                                dec->vis_parity_pending = 1;
-                                if (dec->debug_level >= 2) {
-                                    fprintf(stderr, "[VIS] 7 data bits collected: 0x%02x\n",
-                                            (uint8_t)dec->vis_data);
-                                }
-                            }
-                        } else if (dec->vis_parity_pending) {
-                            /* Decode parity bit (bit 7) */
-                            int parity_bit = (d11 > d13) ? 1 : 0;
-                            dec->vis_data |= (parity_bit << 7);
-                            
-                            int calculated_parity = __builtin_popcount(dec->vis_data & 0x7F) & 1;  /* odd=1, even=0 */
-                            
-                            if (dec->debug_level >= 2) {
-                                fprintf(stderr, "[VIS] 7 data bits + parity: 0x%02x parity_rx=%d calc=%d %s\n",
-                                        (uint8_t)dec->vis_data, parity_bit, calculated_parity,
-                                        (parity_bit == calculated_parity) ? "OK" : "FAIL");
-                            }
-                            
-                            /* Accept VIS even if parity fails (for robustness) */
-                            if (dec->sync_mode == 2) {
-                                if (dec->vis_data == 0x23) {
-                                    dec->sync_mode = 9;
-                                    dec->vis_data = 0;
-                                    dec->vis_cnt = 7;
-                                    dec->vis_parity_pending = 0;
-                                    dec->vis_extended = 1;
-                                } else {
-                                    sstv_mode_t mode = vis_code_to_mode((uint8_t)dec->vis_data, 0);
-                                    if (mode != SSTV_MODE_COUNT) {
-                                        dec->detected_mode = mode;
-                                        dec->sync_state = SYNC_DATA_WAIT;
-                                        if (dec->debug_level >= 2) {
-                                            fprintf(stderr, "[DECODER] VIS decoded: 0x%02x → mode %d\n",
-                                                    (uint8_t)dec->vis_data, mode);
-                                        }
-                                    } else if (dec->debug_level >= 2) {
-                                        fprintf(stderr, "[VIS] VIS code 0x%02x not recognized\n", (uint8_t)dec->vis_data);
-                                    }
-                                    dec->sync_mode = 0;
-                                }
-                            } else {
-                                sstv_mode_t mode = vis_code_to_mode((uint8_t)dec->vis_data, 1);
-                                if (mode != SSTV_MODE_COUNT) {
-                                    dec->detected_mode = mode;
-                                    dec->sync_state = SYNC_DATA_WAIT;
-                                    if (dec->debug_level >= 2) {
-                                        fprintf(stderr, "[DECODER] VIS decoded: 0x%02x → mode %d (extended)\n",
-                                                (uint8_t)dec->vis_data, mode);
-                                    }
-                                }
-                                dec->sync_mode = 0;
-                            }
                         }
                     }
                 }
@@ -847,14 +1050,16 @@ static sstv_mode_t vis_code_to_mode(uint8_t vis_code, int is_extended) {
             
             /* Disambiguate extended codes that share same byte value */
             if (is_extended) {
-                /* Extended VIS codes: MR, MP, ML, MN, MC series */
-                /* These are only valid in extended mode */
-                if (mode >= SSTV_MR73 && mode <= SSTV_MC180) {
+                /* Extended VIS codes: MR, MP, ML, MN, MC series (NOT Robot 24, B/W 8, B/W 12) */
+                /* MR series: 21-25, MP series: 26-29, ML series: 30-33, MN series: 38-40, MC series: 41-43 */
+                if ((mode >= SSTV_MR73 && mode <= SSTV_ML320) ||
+                    (mode >= SSTV_MN73 && mode <= SSTV_MC180)) {
                     return mode;
                 }
             } else {
-                /* Standard VIS codes: exclude extended-only modes */
-                if (mode < SSTV_MR73 || mode > SSTV_MC180) {
+                /* Standard VIS codes: exclude modes that only exist in extended form */
+                if ((mode < SSTV_MR73 || mode > SSTV_ML320) &&
+                    (mode < SSTV_MN73 || mode > SSTV_MC180)) {
                     return mode;
                 }
             }
@@ -964,6 +1169,209 @@ static int vis_parity_ok(uint8_t vis_code) {
 }
 
 /**
+ * Allocate image buffer for the detected mode
+ * 
+ * @param dec Decoder handle
+ * @param mode SSTV mode
+ * @return 0 on success, -1 on error
+ */
+static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode) {
+    if (!dec) return -1;
+    
+    const sstv_mode_info_t *info = sstv_get_mode_info(mode);
+    if (!info) return -1;
+    
+    /* Free existing buffer if any */
+    if (dec->image_buf.pixels) {
+        free(dec->image_buf.pixels);
+        dec->image_buf.pixels = NULL;
+    }
+    
+    /* Allocate RGB24 buffer */
+    dec->image_buf.width = info->width;
+    dec->image_buf.height = info->height;
+    dec->image_buf.bytes_per_pixel = 3;  /* RGB24 */
+    size_t buffer_size = (size_t)info->width * info->height * 3;
+    
+    dec->image_buf.pixels = (uint8_t*)malloc(buffer_size);
+    if (!dec->image_buf.pixels) {
+        dec->image_buf.width = 0;
+        dec->image_buf.height = 0;
+        return -1;
+    }
+    
+    /* Initialize to black */
+    memset(dec->image_buf.pixels, 0, buffer_size);
+    
+    /* Reset position counters */
+    dec->image_buf.current_line = 0;
+    dec->image_buf.current_col = 0;
+    
+    /* Initialize image decoder state */
+    dec->img_dec.state = IMAGE_SYNC_WAIT;
+    dec->img_dec.sample_counter = 0;
+    dec->img_dec.current_channel = 0;
+    dec->img_dec.freq_accum = 0.0;
+    dec->img_dec.freq_samples = 0;
+    
+    /* Calculate samples per pixel based on mode */
+    /* For simplicity, assume equal time per pixel across the line */
+    /* More sophisticated modes would need per-channel timing */
+    const sstv_mode_info_t *mode_info = sstv_get_mode_info(mode);
+    if (mode_info) {
+        /* Duration per line in seconds */
+        double line_duration = mode_info->duration_sec / (double)mode_info->height;
+        /* Samples per line */
+        double samples_per_line = line_duration * dec->sample_rate;
+        /* Samples per pixel (rough estimate) */
+        dec->img_dec.samples_per_pixel = samples_per_line / (double)info->width;
+    } else {
+        dec->img_dec.samples_per_pixel = 1.0;
+    }
+    
+    if (dec->debug_level >= 2) {
+        fprintf(stderr, "[DECODER] Allocated image buffer: %dx%d (mode %s)\n",
+                info->width, info->height, info->name);
+        fprintf(stderr, "[DECODER] Samples per pixel: %.2f\n", dec->img_dec.samples_per_pixel);
+    }
+    
+    return 0;
+}
+
+/**
+ * Convert frequency (Hz) to color value (0-255)
+ * SSTV uses 1500-2300 Hz for black-to-white
+ * 
+ * @param freq_hz Frequency in Hz
+ * @return Color value 0-255
+ */
+static int frequency_to_color(double freq_hz) {
+    /* SSTV standard: 1500 Hz = black (0), 2300 Hz = white (255) */
+    const double f_black = 1500.0;
+    const double f_white = 2300.0;
+    
+    if (freq_hz <= f_black) return 0;
+    if (freq_hz >= f_white) return 255;
+    
+    /* Linear mapping */
+    double normalized = (freq_hz - f_black) / (f_white - f_black);
+    int color = (int)(normalized * 255.0 + 0.5);
+    
+    /* Clamp to valid range */
+    if (color < 0) return 0;
+    if (color > 255) return 255;
+    return color;
+}
+
+/**
+ * Store a decoded pixel value into the image buffer
+ * 
+ * @param dec Decoder handle
+ * @param color_value Color value 0-255
+ * @param channel Color channel (0=R, 1=G, 2=B for RGB modes; 0=Y for grayscale)
+ */
+static void decoder_store_pixel(sstv_decoder_t *dec, int color_value, int channel) {
+    if (!dec || !dec->image_buf.pixels) return;
+    
+    int line = dec->image_buf.current_line;
+    int col = dec->image_buf.current_col;
+    
+    /* Bounds check */
+    if (line < 0 || line >= dec->image_buf.height) return;
+    if (col < 0 || col >= dec->image_buf.width) return;
+    
+    /* Calculate pixel offset (RGB24 format) */
+    size_t offset = ((size_t)line * dec->image_buf.width + col) * 3;
+    
+    /* Clamp color value */
+    if (color_value < 0) color_value = 0;
+    if (color_value > 255) color_value = 255;
+    
+    /* Store based on channel */
+    if (channel >= 0 && channel < 3) {
+        dec->image_buf.pixels[offset + channel] = (uint8_t)color_value;
+    } else {
+        /* Grayscale - set all channels */
+        dec->image_buf.pixels[offset + 0] = (uint8_t)color_value;
+        dec->image_buf.pixels[offset + 1] = (uint8_t)color_value;
+        dec->image_buf.pixels[offset + 2] = (uint8_t)color_value;
+    }
+}
+
+/**
+ * Process image data sample - decode pixels from frequency tones
+ * 
+ * This is a simplified decoder that treats all modes as grayscale for now.
+ * Future enhancement: add per-mode color decoding (RGB sequential, YC, etc.)
+ * 
+ * @param dec Decoder handle
+ * @param freq_11 1100 Hz tone energy (or similar low freq)
+ * @param freq_13 1300 Hz tone energy (or similar high freq)
+ * @param freq_19 1900 Hz sync tone energy
+ */
+static void decoder_process_image_sample(sstv_decoder_t *dec, double freq_11, double freq_13, double freq_19) {
+    if (!dec || !dec->image_buf.pixels) return;
+    
+    /* Simple frequency estimation from tone detector outputs */
+    /* This is a very rough approximation - real SSTV decoders use PLL */
+    double total_energy = freq_11 + freq_13;
+    if (total_energy < 1.0) total_energy = 1.0;
+    
+    /* Ratio-based frequency estimation */
+    /* freq_13 (high) vs freq_11 (low) gives us approximate frequency */
+    double ratio = freq_13 / total_energy;  /* 0.0 to 1.0 */
+    
+    /* Map ratio to SSTV frequency range (1500-2300 Hz) */
+    double estimated_freq = 1500.0 + ratio * 800.0;  /* 1500-2300 Hz */
+    
+    /* Convert frequency to color value */
+    int color = frequency_to_color(estimated_freq);
+    
+    /* Accumulate for averaging (reduces noise) */
+    dec->img_dec.freq_accum += (double)color;
+    dec->img_dec.freq_samples++;
+    dec->img_dec.sample_counter++;
+    
+    /* When we've accumulated enough samples for one pixel */
+    if (dec->img_dec.sample_counter >= (int)dec->img_dec.samples_per_pixel) {
+        /* Average the accumulated values */
+        int avg_color = 0;
+        if (dec->img_dec.freq_samples > 0) {
+            avg_color = (int)(dec->img_dec.freq_accum / (double)dec->img_dec.freq_samples + 0.5);
+        }
+        
+        /* Store the pixel (grayscale for now) */
+        decoder_store_pixel(dec, avg_color, -1);  /* -1 = grayscale (all channels) */
+        
+        /* Move to next pixel */
+        dec->image_buf.current_col++;
+        if (dec->image_buf.current_col >= dec->image_buf.width) {
+            /* Move to next line */
+            dec->image_buf.current_col = 0;
+            dec->image_buf.current_line++;
+            
+            if (dec->debug_level >= 2 && (dec->image_buf.current_line % 10 == 0)) {
+                fprintf(stderr, "[DECODER] Line %d/%d complete\n",
+                        dec->image_buf.current_line, dec->image_buf.height);
+            }
+            
+            /* Check if image is complete */
+            if (dec->image_buf.current_line >= dec->image_buf.height) {
+                dec->img_dec.state = IMAGE_COMPLETE;
+                if (dec->debug_level >= 2) {
+                    fprintf(stderr, "[DECODER] Image decoding complete\n");
+                }
+            }
+        }
+        
+        /* Reset accumulators */
+        dec->img_dec.sample_counter = 0;
+        dec->img_dec.freq_accum = 0.0;
+        dec->img_dec.freq_samples = 0;
+    }
+}
+
+/**
  * Check if VIS has been fully decoded and extract mode
  * 
  * @param dec Decoder handle
@@ -1011,11 +1419,29 @@ sstv_rx_status_t sstv_decoder_feed(
         decoder_process_sample(dec, sample);
     }
 
-    /* Check VIS readiness */
+    /* Check VIS readiness and allocate image buffer if mode detected */
     sstv_mode_t detected_mode;
     if (decoder_check_vis_ready(dec, &detected_mode)) {
-        dec->last_status = SSTV_RX_IMAGE_READY;
-        return SSTV_RX_IMAGE_READY;
+        /* Allocate image buffer if not already done */
+        if (!dec->image_buf.pixels) {
+            if (decoder_allocate_image_buffer(dec, detected_mode) != 0) {
+                if (dec->debug_level >= 1) {
+                    fprintf(stderr, "[DECODER] Failed to allocate image buffer\n");
+                }
+                dec->last_status = SSTV_RX_ERROR;
+                return SSTV_RX_ERROR;
+            }
+        }
+        
+        /* Check if image decoding is complete */
+        if (dec->img_dec.state == IMAGE_COMPLETE) {
+            dec->last_status = SSTV_RX_IMAGE_READY;
+            return SSTV_RX_IMAGE_READY;
+        }
+        
+        /* Still decoding image data */
+        dec->last_status = SSTV_RX_NEED_MORE;
+        return SSTV_RX_NEED_MORE;
     }
 
     /* Still accumulating data */
@@ -1027,7 +1453,25 @@ int sstv_decoder_get_image(sstv_decoder_t *dec, sstv_image_t *out_image) {
     if (!dec || !out_image) {
         return -1;
     }
-    return -1;
+    
+    /* Check if we have a decoded image */
+    if (!dec->image_buf.pixels) {
+        return -1;  /* No image available */
+    }
+    
+    /* Fill output structure */
+    out_image->pixels = dec->image_buf.pixels;
+    out_image->width = (uint32_t)dec->image_buf.width;
+    out_image->height = (uint32_t)dec->image_buf.height;
+    out_image->stride = (uint32_t)(dec->image_buf.width * 3);  /* RGB24 */
+    out_image->format = SSTV_RGB24;
+    
+    if (dec->debug_level >= 2) {
+        fprintf(stderr, "[DECODER] Returning image: %dx%d\n",
+                dec->image_buf.width, dec->image_buf.height);
+    }
+    
+    return 0;
 }
 
 int sstv_decoder_get_state(sstv_decoder_t *dec, sstv_decoder_state_t *state) {

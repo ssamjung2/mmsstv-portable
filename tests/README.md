@@ -154,6 +154,103 @@ After VIS tests pass:
 
 ---
 
-**Last Updated**: January 28, 2026  
+**Last Updated**: February 20, 2026  
 **Status**: ✅ All tests passing  
-**Project**: mmsstv-portable (SSTV Encoder Library)
+**Project**: mmsstv-portable (SSTV Encoder/Decoder Library)
+
+---
+
+## 🧪 Advanced Signal Processing Tests
+
+### test_hf_impairments - HF Propagation Impairment Simulator
+
+**Purpose:** Validates DSP pipeline performance under realistic 20m HF propagation conditions.
+
+**What it does:**
+- Applies S7 noise floor (~25 dB SNR typical for weak SSTV signals)
+- Simulates Rayleigh fading (QSB - slow amplitude variations)
+- Adds background hum (50 Hz + harmonics from mains interference)
+- Processes through complete DSP pipeline (LPF → BPF → AGC → Resonators)
+- Outputs intermediate WAV files at each processing stage
+
+**Build:**
+```bash
+cd build
+cmake .. -DBUILD_RX=ON -DBUILD_TESTS=ON
+make test_hf_impairments
+```
+
+**Usage:**
+```bash
+# Run with defaults (S7 conditions, 25 dB SNR)
+./bin/test_hf_impairments path/to/clean_sstv.wav
+
+# Specify output directory and custom SNR
+./bin/test_hf_impairments clean.wav ./s5_test 18.0
+
+# Test different signal strengths
+./bin/test_hf_impairments clean.wav ./s9_test 35.0  # Strong signal
+./bin/test_hf_impairments clean.wav ./s7_test 25.0  # Typical weak signal
+./bin/test_hf_impairments clean.wav ./s5_test 18.0  # Marginal signal
+./bin/test_hf_impairments clean.wav ./s3_test 12.0  # Very weak signal
+```
+
+**Output Files:**
+- `00_clean_input.wav` - Original signal (baseline reference)
+- `01_with_noise.wav` - After HF impairments (noise + fading + hum)
+- `02_after_lpf.wav` - After 2-tap simple LPF (anti-aliasing)
+- `03_after_bpf.wav` - After bandpass FIR filter (HBPF/HBPFS)
+- `04_after_agc.wav` - After AGC normalization
+- `05_final.wav` - Final output ready for tone detection/decoding
+
+**SNR Guidelines:**
+- **35 dB (S9):** Strong signal, perfect decode expected
+- **25 dB (S7):** Typical weak signal, clean decode with minor artifacts
+- **18 dB (S5):** Marginal signal, visible noise in image
+- **12 dB (S3):** Very weak signal, heavy noise, difficult decode
+
+**Use Cases:**
+1. **Filter performance validation** - Compare before/after to verify noise rejection
+2. **AGC effectiveness** - Check if fading is properly compensated
+3. **Weak signal testing** - Verify decoder works at various S-meter readings
+4. **Documentation** - Generate example signals showing DSP pipeline operation
+
+**Expected Results:**
+- BPF should suppress out-of-band noise (especially 50 Hz hum)
+- AGC should normalize fading without introducing distortion
+- Final output should be clean enough for tone detector operation
+- Decode should succeed even with visible noise in intermediate stages
+
+**Example Workflow:**
+```bash
+# 1. Generate clean SSTV signal
+./bin/encode_wav --mode scottie1 --input test.jpg --output clean.wav
+
+# 2. Apply HF impairments (S7 conditions)
+./bin/test_hf_impairments clean.wav ./hf_test 25.0
+
+# 3. Listen to intermediate stages
+play hf_test/01_with_noise.wav   # Noisy signal (what you'd hear on HF)
+play hf_test/04_after_agc.wav     # Clean normalized output
+
+# 4. Decode final output to verify filter effectiveness
+./bin/decode_wav hf_test/05_final.wav
+```
+
+**Technical Details:**
+
+*HF Impairment Model:*
+- **AWGN:** Additive White Gaussian Noise scaled to target SNR
+- **Rayleigh Fading:** Low-pass filtered (0.2 Hz) for slow QSB, 6 dB depth
+- **Background Hum:** 50 Hz + 100 Hz + 150 Hz harmonics at -40 dB
+
+*DSP Pipeline (matches decoder.cpp):*
+1. 2-tap LPF: `(x[n] + x[n-1]) / 2` - Simple anti-aliasing
+2. BPF: Kaiser FIR ~104 taps, 400-2600 Hz passband
+3. AGC: Peak tracking with 512× target normalization
+4. Scaling: Final ×2 for tone detector range
+
+**References:**
+- Filter specs: `docs/FILTER_SPECIFICATIONS.md`
+- Implementation verification: `docs/FILTER_IMPLEMENTATION_VERIFICATION.md`
+- DSP pipeline: `src/decoder.cpp` lines 752-850

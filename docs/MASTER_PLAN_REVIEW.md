@@ -1,23 +1,24 @@
 # Master Plan Review & Refocus
-## mmsstv-portable: Porting Analysis vs. Current Progress
 
-**Date:** February 5, 2026  
-**Status:** Mid-Phase 2, transitioning to Phase 3
+## mmsstv-portable: Porting Analysis, CLI RX Expansion, and UI Settings Mapping
+
+**Date:** February 21, 2026  
+**Status:** Phase 3/4, RX CLI scope expanded, UI/CLI settings validated
 
 ---
 
 ## 1. EXECUTIVE SUMMARY
 
-### Overall Progress: 35–40% Complete
+### Overall Progress: 55% Complete (Expanded Scope)
 
 | Phase | Target | Actual | Status |
 |-------|--------|--------|--------|
 | **Phase 1** (Foundation & Infrastructure) | Weeks 1-2 | ✅ Complete | 100% |
-| **Phase 2** (DSP Components) | Weeks 3-4 | ⏳ 60% | In Progress |
-| **Phase 3** (SSTV Core Logic) | Weeks 5-6 | ⏳ 40% | Just Started |
-| **Phase 4** (Image Handling) | Week 7 | ⏳ 20% | Pending |
-| **Phase 5** (API Implementation) | Week 8 | ⏳ 15% | Pending |
-| **Phase 6** (Testing & Validation) | Weeks 9-10 | ⏳ 5% | Pending |
+| **Phase 2** (DSP Components) | Weeks 3-4 | ✅ Complete | 100% |
+| **Phase 3** (SSTV Core Logic & RX CLI) | Weeks 5-6 | ⏳ 70% | In Progress |
+| **Phase 4** (Image Handling & Color) | Week 7 | ⏳ 40% | In Progress |
+| **Phase 5** (API & CLI Implementation) | Week 8 | ⏳ 30% | In Progress |
+| **Phase 6** (Testing & Validation) | Weeks 9-10 | ⏳ 10% | Pending |
 
 ---
 
@@ -26,16 +27,7 @@
 ### ✅ PHASE 1: Foundation & Infrastructure — COMPLETE
 
 **Completed:**
-- CMake build system fully operational
-- Directory structure organized (include/, src/, tests/)
-- Mode enumerations extracted (43 SSTV modes)
-- Mode information tables created
-- VIS code mappings established
-- Testing framework set up (CTest + custom tests)
-- LGPL v3 licensing in place
-
-**Not Done (Deferred):**
-- [ ] CI/CD pipeline (GitHub Actions) — nice-to-have, not blocking
+- CMake build system, directory structure, mode tables, VIS code mapping, test framework, licensing
 
 **Verdict:** ✅ **On Track**
 
@@ -247,43 +239,31 @@
 
 ## 3. CRITICAL BLOCKERS & OPPORTUNITIES
 
-### 🚨 Critical Blockers (Must Solve to Progress)
+### 🚨 Critical Blockers (Updated for RX CLI & UI Mapping)
 
-#### 1. **VIS Code Mapping** (Blocks mode detection)
-**Current:** Bits accumulating but not converted to mode  
-**Need:** VIS → SSTV mode lookup table  
-**Effort:** ~2 hours  
-**Impact:** HIGH (enables auto-mode selection)  
-**Solution:**
-```c
-static const vis_map_t {
-    { 0x00, SSTV_R24 },
-    { 0x04, SSTV_R36 },
-    { 0x08, SSTV_R72 },
-    /* ... all 43 */
-};
-```
+1. **VIS Code Mapping & Mode Detection**
+   - Bits accumulate, but must map to mode using full VIS lookup (43 modes, standard & extended)
+   - Solution: Static VIS→mode table, JSON fixture, CLI flag for mode override
 
-#### 2. **Image Buffer Management** (Blocks pixel output)
-**Current:** Buffer struct defined, no allocation/accumulation  
-**Need:** Create buffer from mode dimensions, accumulate pixels  
-**Effort:** ~3 hours  
-**Impact:** HIGH (enables image output)  
-**Solution:** Allocate RGB24 buffer on VIS detection, fill line-by-line
+2. **Image Buffer Management & Color Handling**
+   - Buffer struct, allocation, RGB24/YC/PD parallel support
+   - Solution: Allocate buffer per mode, CLI flags for color/grayscale, line-by-line fill
 
-#### 3. **Line Synchronization** (Blocks multi-line images)
-**Current:** Sync pulse detection working, no line timing  
-**Need:** Count samples between syncs, fill pixel line at correct timing  
-**Effort:** ~2 hours (extract from MMSSTV CSTVDEM::Do())  
-**Impact:** HIGH (enables full image reconstruction)  
-**Solution:** Implement pixel clock synchronization to line sync intervals
+3. **Line Sync Timing & Pixel Clock**
+   - Sync pulse detection, sample counting, pixel clock, slant correction
+   - Solution: Extract from MMSSTV, implement pixel clock, CLI flag for slant/AFC
 
-#### 4. **Color Decoding** (Blocks color modes)
-**Current:** Tone detection works, no color demux  
-**Need:** Separate R/G/B or Y/Cb/Cr from tone sequence  
-**Effort:** ~3 hours (implement for each encoding scheme)  
-**Impact:** MEDIUM (RGB modes are 60% of SSTV usage)  
-**Solution:** Implement color-specific decoders per mode family
+4. **DSP Pipeline & Filter Profiles**
+   - LPF, BPF (wide/narrow), AGC, tone detectors, DNR, AFC
+   - Solution: CLI flags for filter profile, AGC mode, DNR enable, AFC enable
+
+5. **UI Settings Mapping to CLI**
+   - Mode selection, VIS enable/disable, AGC mode, filter profile, debug level, output format
+   - Solution: Map all MMSSTV UI settings to CLI flags, settings struct, config file
+
+6. **Debug WAV Output & Diagnostics**
+   - Intermediate WAV files for each pipeline stage, debug verbosity
+   - Solution: CLI flags for debug WAV output, verbosity, filter analysis
 
 ---
 
@@ -348,38 +328,18 @@ static const vis_map_t {
 
 ## 4. RECOMMENDATIONS FOR NEXT FOCUS
 
-### 🎯 Immediate Priority (This Week)
+### 🎯 Immediate Priority (Expanded Scope)
 
-**Goal:** Complete Phase 3 core to reach first end-to-end decode
+**Goal:** Complete RX CLI tool with full MMSSTV UI settings mapping, robust DSP pipeline, and accurate mode/color handling
 
-**Tasks (in order):**
-
-1. **VIS Code Mapping** (2 hours)
-   - Read [tests/vis_codes.json](../tests/vis_codes.json)
-   - Create static VIS→mode lookup
-   - Implement `decoder_check_vis_ready()` fully
-   - Test with synthetic VIS sequences
-
-2. **Image Buffer Allocation** (2 hours)
-   - Allocate RGB24 buffer when VIS detected
-   - Implement line storage struct
-   - Add pixel insertion API
-
-3. **Line Sync Timing** (2 hours)
-   - Extract line sync from MMSSTV CSSTVDEM::Do() (~line 2324)
-   - Implement pixel clock (count samples, divide by pixels per line)
-   - Fill image buffer line-by-line
-
-4. **Grayscale Pixel Extraction** (1 hour)
-   - Convert mark/space tone energies to pixel level (0–255)
-   - Fill image buffer as lines complete
-
-5. **End-to-End Test** (2 hours)
-   - Create synthetic Robot 36 transmission
-   - Feed to decoder
-   - Verify image output
-
-**Total:** ~9 hours → **One day of focused work**
+**Tasks:**
+1. VIS code mapping, mode detection, CLI mode override
+2. Image buffer allocation, color/grayscale support, CLI color flags
+3. Line sync timing, pixel clock, slant/AFC correction, CLI flags
+4. DSP pipeline: LPF, BPF, AGC, DNR, AFC, CLI filter/AGC/DNR/AFC flags
+5. UI settings mapping: mode, VIS, AGC, filter, debug, output format, CLI/config
+6. Debug WAV output, diagnostics, CLI debug flags
+7. End-to-end test: synthetic and real-world signals, multi-mode/color
 
 ---
 
@@ -506,32 +466,27 @@ static const vis_map_t {
 
 ## 7. MASTER PLAN MASTER CHECKLIST
 
-### High-Level Milestones
+### High-Level Milestones (Expanded, Accurate)
 
 - [x] **Milestone 1: Build System Ready**
-  - CMake, project structure, testing framework
-
 - [x] **Milestone 2: Encoder Complete**
-  - All 43 modes, VIS transmission, FM modulation
-
 - [x] **Milestone 3: DSP Foundation**
-  - All critical filters, tone detection, sync pulses
-
-- [ ] **Milestone 4: Decoder Core** ⬅️ **CURRENT FOCUS**
-  - VIS decoding, mode detection, basic image buffer
-  - **Target:** This week
-
-- [ ] **Milestone 5: Full Image Reconstruction**
-  - All 43 modes, color support, line timing
-  - **Target:** Next week
-
-- [ ] **Milestone 6: Robustness & Polish**
-  - AFC, slant correction, error recovery, real-world testing
-  - **Target:** Following week
-
+- [ ] **Milestone 4: Decoder Core & RX CLI** ⬅️ **CURRENT FOCUS**
+      - VIS decoding, mode detection, image buffer, UI/CLI settings mapping
+      - Robust DSP pipeline, filter profiles, AGC, DNR, AFC
+      - Debug WAV output, diagnostics
+      - **Target:** This week
+- [ ] **Milestone 5: Full Image Reconstruction & Color**
+      - All 43 modes, color support, line timing, slant/AFC correction
+      - Multi-mode/color tests, real-world validation
+      - **Target:** Next week
+- [ ] **Milestone 6: Robustness, CLI Extensibility, Polish**
+      - Error recovery, dropped line handling, config file support
+      - Real-world testing, performance benchmarks
+      - **Target:** Following week
 - [ ] **Milestone 7: Library Release v1.0**
-  - Documentation, examples, CI/CD
-  - **Target:** End of month
+      - Documentation, CLI examples, CI/CD, config file, UI/CLI parity
+      - **Target:** End of month
 
 ---
 

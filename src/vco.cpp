@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 
 #include "vco.h"
 
@@ -21,14 +22,14 @@ VCO::VCO(double sample_rate) {
         sine_table[i] = std::sin((double)i * pi2 / (double)table_size);
     }
     
-    /* For SSTV transmitter: frequency range 1100-2300 Hz (1200 Hz span)
-       Input normalization: norm = (freq - 1100) / 1200
-       So at norm=0: freq=1100, at norm=1: freq=2300
+    /* For SSTV transmitter: frequency range 1080-2300 Hz to match MMSSTV
+       MMSSTV uses VCO with SetFreeFreq(1100) and SetGain(1200) but with g_dblToneOffset
+       For consistency with MMSSTV VIS (1080/1320 Hz), we use 1080 Hz base
+       Input normalization: norm = (freq - 1080) / 1220
        Phase increment: phase += c2 + c1 * norm
-       We need: c2 corresponds to 1100 Hz, c1*norm spans 1200 Hz
     */
-    c1 = (double)table_size * 1200.0 / sample_freq;  /* 1200 Hz span */
-    c2 = (double)table_size * 1100.0 / sample_freq;  /* Base frequency 1100 Hz */
+    c1 = (double)table_size * 1220.0 / sample_freq;  /* 1220 Hz span (1080-2300) */
+    c2 = (double)table_size * 1080.0 / sample_freq;  /* Base frequency 1080 Hz (MMSSTV) */
     phase = 0.0;
 }
 
@@ -50,6 +51,7 @@ void VCO::initPhase(void) {
 }
 
 double VCO::process(double input) {
+
     phase += c2 + c1 * input;
     while (phase >= table_size) phase -= table_size;
     while (phase < 0) phase += table_size;

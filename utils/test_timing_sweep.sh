@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test different VIS start timing offsets to find the right one
-
-cd /Users/ssamjung/Desktop/WIP/mmsstv-portable
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "${SCRIPT_DIR}/.."
 
 echo "Testing different VIS timing offsets for Robot36..."
 echo "Expected VIS code: 0x88"

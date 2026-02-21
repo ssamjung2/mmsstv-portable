@@ -78,6 +78,10 @@ int main(int argc, char **argv) {
         fclose(fp);
         return 1;
     }
+    
+    /* Enable debug output */
+    sstv_decoder_set_debug_level(dec, 2);
+    sstv_decoder_set_vis_enabled(dec, 1);
 
     const size_t frame_samples = 2048;
     int16_t *pcm = (int16_t *)malloc(frame_samples * sizeof(int16_t));
@@ -100,7 +104,30 @@ int main(int argc, char **argv) {
         }
         sstv_rx_status_t st = sstv_decoder_feed(dec, samples, n);
         if (st == SSTV_RX_IMAGE_READY) {
-            fprintf(stdout, "Image ready (not yet implemented).\n");
+            fprintf(stdout, "Image ready! Retrieving...\n");
+            
+            /* Get the decoded image */
+            sstv_image_t image;
+            if (sstv_decoder_get_image(dec, &image) == 0) {
+                /* Save as PPM file */
+                const char *output_path = "decoded_output.ppm";
+                FILE *out = fopen(output_path, "wb");
+                if (out) {
+                    /* Write PPM header */
+                    fprintf(out, "P6\n%u %u\n255\n", image.width, image.height);
+                    
+                    /* Write pixel data */
+                    fwrite(image.pixels, 1, image.width * image.height * 3, out);
+                    fclose(out);
+                    
+                    fprintf(stdout, "Image saved to %s (%ux%u)\n", 
+                            output_path, image.width, image.height);
+                } else {
+                    fprintf(stderr, "Failed to open output file\n");
+                }
+            } else {
+                fprintf(stderr, "Failed to retrieve image\n");
+            }
             break;
         }
         if (st == SSTV_RX_ERROR) {

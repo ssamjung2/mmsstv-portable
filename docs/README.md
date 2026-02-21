@@ -1,17 +1,39 @@
-# libsstv_encoder - Portable SSTV Encoder Library
+# libsstv - Portable SSTV Encoder/Decoder Library
 
-A lightweight, portable C library for encoding images into SSTV (Slow Scan Television) audio signals.
+A lightweight, portable C/C++ library for encoding and decoding SSTV (Slow Scan Television) signals.
 
 **Based on MMSSTV** by Makoto Mori (JE3HHT) and Nobuyuki Oba
 
+## Status
+
+- ✅ **Encoder:** Production ready (all 43 modes)
+- 🔄 **Decoder:** In development (VIS detection, image decoding)
+
 ## Features
 
+### Encoder (Complete)
 - ✅ **43 SSTV modes** supported (Robot, Scottie, Martin, PD, Pasokon, etc.)
 - ✅ **VIS code encoding** for automatic mode detection
-- ✅ **Simple C API** - Easy integration into any project
+- ✅ **WAV file output** with proper RIFF headers
 - ✅ **Portable** - Works on Linux, macOS, Raspberry Pi, Windows
-- ✅ **Lightweight** - Minimal dependencies, small binary size
 - ✅ **Fast** - Generates audio faster than real-time
+
+### Decoder (In Progress)
+- 🔄 **VIS code detection** - Automatic mode identification
+- 🔄 **DSP pipeline** - IIR/FIR filters, AGC, tone detection
+- 🔄 **Image demodulation** - RGB/YC color decoding
+- ⏸️ **Sync tracking** - Horizontal sync and slant correction
+- ⏸️ **AFC** - Automatic frequency control for radio drift
+
+## Documentation
+
+**NEW - Decoder Architecture:**
+- [`DECODER_ARCHITECTURE_BASELINE.md`](DECODER_ARCHITECTURE_BASELINE.md) - Complete decoder pipeline architecture
+- [`DECODER_STATUS.md`](DECODER_STATUS.md) - Current implementation status
+
+**Encoder Documentation:**
+- [`DOCUMENTATION_INDEX.md`](DOCUMENTATION_INDEX.md) - Complete documentation index
+- [`DSP_CONSOLIDATED_GUIDE.md`](DSP_CONSOLIDATED_GUIDE.md) - DSP filter reference
 
 ## Supported SSTV Modes
 

@@ -1,5 +1,6 @@
 #!/bin/bash
-cd /Users/ssamjung/Desktop/WIP/mmsstv-portable
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "${SCRIPT_DIR}/.."
 
 echo "Testing VIS decoder on all WAV files..."
 echo "========================================"
