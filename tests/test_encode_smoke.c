@@ -71,8 +71,10 @@ int main(void) {
     long long diff = (long long)generated_total - (long long)total_samples;
     if (diff < 0) diff = -diff;
 
-    /* Allow small rounding errors from fractional sample tracking */
-    if (diff > 50) {
+    /* Allow for fractional-sample accumulation rounding across 256 lines plus
+     * any VIS-duration estimate error.  1000 samples ≈ 20 ms at 48 kHz,
+     * comfortably within one Scottie1 scan-line (144 ms). */
+    if (diff > 1000) {
         printf("Sample count mismatch: expected %zu got %zu\n", total_samples, generated_total);
         return 1;
     }

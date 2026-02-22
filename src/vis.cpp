@@ -63,12 +63,6 @@ void VISEncoder::start_16bit(unsigned short code, double samplerate) {
 double VISEncoder::get_frequency() {
     int final_state = is_16bit ? 21 : 13;
     
-    static int call_count = 0;
-    if (call_count < 5 || state >= 4) {
-        fprintf(stderr, "[VIS ENC get_frequency] call=%d state=%d final=%d samples_remaining=%d\n",
-                call_count++, state, final_state, samples_remaining);
-    }
-    
     if (state >= final_state) {
         return 0.0;  // VIS complete
     }
@@ -100,10 +94,6 @@ double VISEncoder::get_frequency() {
             int bit_idx = state - 4;  // Transmit bit 0 first (LSB-first)
             int bit_val = (vis_code & (1 << bit_idx)) ? 1 : 0;
             double freq = bit_val ? 1080.0 : 1320.0;
-            if (bit_idx < 8) {
-                fprintf(stderr, "[VIS ENC SAMPLE] state=%d bit_idx=%d bit_val=%d freq=%.0f vis_code=0x%02x\n", 
-                        state, bit_idx, bit_val, freq, vis_code);
-            }
             return freq;
         }
         
@@ -118,10 +108,6 @@ double VISEncoder::get_frequency() {
                 unsigned char lsb = vis_code & 0xFF;
                 int bit_val = (lsb & (1 << bit_idx)) ? 1 : 0;
                 double freq = bit_val ? 1080.0 : 1320.0;
-                if (bit_idx < 8) {
-                    fprintf(stderr, "[VIS ENC 16bit] state=%d bit=%d val=%d freq=%.0f lsb=0x%02X\n",
-                            state, bit_idx, bit_val, freq, lsb);
-                }
                 return freq;
             }
             if (state >= 12 && state <= 19) {
@@ -131,14 +117,9 @@ double VISEncoder::get_frequency() {
                 unsigned char msb = (vis_code >> 8) & 0xFF;
                 int bit_val = (msb & (1 << bit_idx)) ? 1 : 0;
                 double freq = bit_val ? 1080.0 : 1320.0;
-                if (bit_idx < 8) {
-                    fprintf(stderr, "[VIS ENC 16bit] state=%d bit=%d val=%d freq=%.0f msb=0x%02X\n",
-                            state, bit_idx, bit_val, freq, msb);
-                }
                 return freq;
             }
             if (state == 20) {
-                fprintf(stderr, "[VIS ENC 16bit] state=20 STOP BIT (1200 Hz)\n");
                 // Final stop bit after both VIS codes
                 return 1200.0;  // 30ms stop bit
             }
@@ -148,8 +129,6 @@ double VISEncoder::get_frequency() {
     }
 
     state++;
-
-    //fprintf(stderr, "[VIS_ENC] state=%d final_state=%d is_16bit=%d\n", state, final_state, is_16bit);
 
     if (state == 1) {
         samples_remaining = (int)(0.010 * sample_freq);
@@ -170,8 +149,6 @@ double VISEncoder::get_frequency() {
         int bit_idx = state - 4;
         int bit_val = (vis_code & (1 << bit_idx)) ? 1 : 0;
         double freq = bit_val ? 1080.0 : 1320.0;  /* MMSSTV: bit 1 = 1080 Hz */
-        fprintf(stderr, "[VIS ENC TRANSITION] state=%d→next bit_idx=%d bit_val=%d freq=%.0f vis_code=0x%02x\n",
-                state, bit_idx, bit_val, freq, vis_code);
         return freq;
     }
     

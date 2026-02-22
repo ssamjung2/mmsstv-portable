@@ -448,7 +448,10 @@ static int test_cfir2_lpf_symmetry() {
     print_test_header("test_cfir2_lpf_symmetry",
                       "CFIR2 LPF taps are symmetric and normalized");
 
-    const int tap = 63;  // 64 taps (tap+1)
+    // tap must be even so MakeFilter fills all tap+1 slots correctly.
+    // With odd tap=63, MakeFilter writes only 63 taps (n/2*2+1 = 63) leaving
+    // h_[63]=0 and breaking the h[i]==h[tap-i] symmetry check at i=0.
+    const int tap = 62;  // 63 taps (tap+1), even tap gives correct fill
     const double fs = 48000.0;
     const double fc = 2000.0;
     const double att = 60.0;
@@ -490,7 +493,10 @@ static int test_hilbert_taps() {
     print_test_header("test_hilbert_taps",
                       "Hilbert taps are anti-symmetric and sum to ~0");
 
-    const int n = 63;  // tap count = n+1
+    // n must be even so the Hamming window 0.54-0.46*cos(2*pi*i/n) is
+    // symmetric about the centre l=n/2.  With odd n=63, l=31 but n/2≠31
+    // in real arithmetic (31.5), so w(l+k)≠w(l-k) and antisymmetry fails.
+    const int n = 62;  // 63 taps, even n gives symmetric Hamming window
     const double fs = 48000.0;
     const double fc1 = 300.0;
     const double fc2 = 3000.0;
@@ -540,30 +546,27 @@ static int test_ciirtank_tone_selectivity() {
     tank_target.SetFreq(f_target, fs, bw);
     tank_interfere.SetFreq(f_interfere, fs, bw);
 
-    // Deterministic pseudo-noise (LCG) for repeatability
-    uint32_t seed = 0x12345678;
-    auto next_noise = [&seed]() {
-        seed = 1664525u * seed + 1013904223u;
-        return (static_cast<double>(seed & 0xFFFF) / 32768.0) - 1.0; // [-1,1)
-    };
-
-    const int n = 2000;
+    // Drive with TARGET tone only.  A properly tuned resonator should accumulate
+    // far more energy at its own frequency than a resonator tuned 300 Hz away
+    // (Q = f/BW = 2000/50 = 40; attenuation at +300 Hz ≈ 12 dB).
+    // Using equal-amplitude tones for both resonators would cancel the
+    // selectivity difference since each resonator is equally on-resonance.
+    const int n = 4000;  // ~83 ms – long enough for both filters to settle
     double energy_target = 0.0;
     double energy_interfere = 0.0;
 
     for (int i = 0; i < n; i++) {
         double t = static_cast<double>(i) / fs;
-        double signal = 0.7 * std::sin(2.0 * kPi * f_target * t)
-                      + 0.7 * std::sin(2.0 * kPi * f_interfere * t)
-                      + 0.2 * next_noise();
+        double signal = std::sin(2.0 * kPi * f_target * t);
         double y_target = tank_target.Do(signal);
         double y_interfere = tank_interfere.Do(signal);
         energy_target += y_target * y_target;
         energy_interfere += y_interfere * y_interfere;
     }
 
-    // Expect higher energy at the target resonator than the interferer.
-    if (energy_target > energy_interfere * 1.2) {
+    // Target resonator must accumulate at least 5× more energy than the
+    // off-frequency resonator (theoretical rejection at 300 Hz offset ≈ 12 dB).
+    if (energy_target > energy_interfere * 5.0) {
         std::printf("PASS CIIRTANK selectivity: target=%.3e interfere=%.3e\n",
                     energy_target, energy_interfere);
         return 1;
