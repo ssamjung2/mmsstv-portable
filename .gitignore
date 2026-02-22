@@ -4,6 +4,9 @@ cmake-build-*/
 /tests/test_modes/
 utils/test_vis_output
 
+# Compiled output
+bin/
+
 # Generated files
 *.o
 *.so
