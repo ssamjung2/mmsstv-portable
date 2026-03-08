@@ -1,15 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
 project(sstv_encoder VERSION 1.0.0 LANGUAGES C CXX)
 
-# Place all compiled outputs (executables + dylibs) in bin/ so everything
+# Place all compiled outputs (executables + shared libs) in bin/ so everything
 # is self-contained and relocatable.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
-# Use @executable_path so each binary finds the dylibs sitting next to it
-# in bin/ regardless of where the project lives on disk.
-set(CMAKE_INSTALL_RPATH "@executable_path")
+# Set RPATH so each binary finds the shared libs in the same bin/ directory
+# regardless of where the project lives on disk.
+# Apple uses @executable_path; Linux/everywhere else uses $ORIGIN.
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH "@executable_path")
+else()
+    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
 set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 # Build options
@@ -145,50 +150,66 @@ if(MATH_LIBRARY)
 endif()
 
 # Examples
+# All target_link_libraries calls below use keyword (PRIVATE) style so that
+# adding math library linkage later in the same block does not cause
+# CMake's "mixed plain/keyword signature" error on any platform.
 if(BUILD_EXAMPLES)
     add_executable(list_modes utils/list_modes.c)
     if(BUILD_SHARED)
-        target_link_libraries(list_modes sstv_encoder)
+        target_link_libraries(list_modes PRIVATE sstv_encoder)
     else()
-        target_link_libraries(list_modes sstv_encoder_static)
+        target_link_libraries(list_modes PRIVATE sstv_encoder_static)
     endif()
 
     add_executable(encode_wav utils/encode_wav.c)
     if(BUILD_SHARED)
-        target_link_libraries(encode_wav sstv_encoder)
+        target_link_libraries(encode_wav PRIVATE sstv_encoder)
     else()
-        target_link_libraries(encode_wav sstv_encoder_static)
+        target_link_libraries(encode_wav PRIVATE sstv_encoder_static)
     endif()
 
     add_executable(generate_all_modes utils/generate_all_modes.c)
     if(BUILD_SHARED)
-        target_link_libraries(generate_all_modes sstv_encoder)
+        target_link_libraries(generate_all_modes PRIVATE sstv_encoder)
     else()
-        target_link_libraries(generate_all_modes sstv_encoder_static)
+        target_link_libraries(generate_all_modes PRIVATE sstv_encoder_static)
     endif()
-    
+
     # Real image test driver (requires stb_image)
     add_executable(test_real_images utils/test_real_images.c)
     target_include_directories(test_real_images PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     if(BUILD_SHARED)
-        target_link_libraries(test_real_images sstv_encoder m)
+        target_link_libraries(test_real_images PRIVATE sstv_encoder)
     else()
-        target_link_libraries(test_real_images sstv_encoder_static m)
+        target_link_libraries(test_real_images PRIVATE sstv_encoder_static)
     endif()
 
     if(BUILD_RX)
         add_executable(decode_wav utils/decode_wav.c)
         if(BUILD_SHARED)
-            target_link_libraries(decode_wav sstv_decoder)
+            target_link_libraries(decode_wav PRIVATE sstv_decoder)
         else()
-            target_link_libraries(decode_wav sstv_decoder_static)
+            target_link_libraries(decode_wav PRIVATE sstv_decoder_static)
         endif()
-        
+
         add_executable(decode_wav_debug utils/decode_wav_debug.c)
         if(BUILD_SHARED)
-            target_link_libraries(decode_wav_debug sstv_decoder)
+            target_link_libraries(decode_wav_debug PRIVATE sstv_decoder)
         else()
-            target_link_libraries(decode_wav_debug sstv_decoder_static)
+            target_link_libraries(decode_wav_debug PRIVATE sstv_decoder_static)
+        endif()
+    endif()
+
+    # On Linux, example executables that call lrintf/etc. need explicit -lm.
+    # MATH_LIBRARY is set by find_library() above; empty on macOS (not needed).
+    if(MATH_LIBRARY)
+        foreach(_exe list_modes encode_wav generate_all_modes test_real_images)
+            target_link_libraries(${_exe} PRIVATE ${MATH_LIBRARY})
+        endforeach()
+        if(BUILD_RX)
+            foreach(_exe decode_wav decode_wav_debug)
+                target_link_libraries(${_exe} PRIVATE ${MATH_LIBRARY})
+            endforeach()
         endif()
     endif()
 endif()
@@ -284,19 +305,19 @@ install(FILES ${CMAKE_BINARY_DIR}/sstv_encoder.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
 # Convenience targets
 #
-#   make rebuild   – clean the build tree then recompile everything
-#   make full      – clean rebuild + run the full test suite
-#   make check     – run the test suite with verbose per-test output
+#   make rebuild   - clean the build tree then recompile everything
+#   make full      - clean rebuild + run the full test suite
+#   make check     - run the test suite with verbose per-test output
 #                    (requires -DBUILD_TESTS=ON at configure time)
 #
 # CMake built-in targets (always available):
-#   make clean     – remove build artefacts
-#   make test      – run registered tests via CTest
-#   make install   – install libraries and headers
-# ─────────────────────────────────────────────────────────────────────────────
+#   make clean     - remove build artefacts
+#   make test      - run registered tests via CTest
+#   make install   - install libraries and headers
+# ---------------------------------------------------------------------------
 
 # rebuild: clean then recompile everything
 add_custom_target(rebuild

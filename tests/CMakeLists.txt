@@ -27,12 +27,33 @@ add_executable(test_hf_impairments test_hf_impairments.cpp ../src/SpectralSubtra
 target_include_directories(test_hf_impairments PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(test_hf_impairments PRIVATE sstv_encoder_static)
 
+add_executable(test_decode_images test_decode_images.cpp)
+target_include_directories(test_decode_images PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/external)
+target_link_libraries(test_decode_images PRIVATE sstv_decoder_static m)
+
+add_executable(test_decode_modes test_decode_modes.cpp)
+target_include_directories(test_decode_modes PRIVATE
+    ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(test_decode_modes PRIVATE sstv_decoder_static m)
+
 # Add test target
 add_test(NAME vis_codes COMMAND $<TARGET_FILE:test_vis_codes>)
 add_test(NAME encode_smoke COMMAND $<TARGET_FILE:test_encode_smoke>)
 add_test(NAME dsp_reference COMMAND $<TARGET_FILE:test_dsp_reference>)
 add_test(NAME decoder_basic COMMAND $<TARGET_FILE:test_decoder_basic>)
 add_test(NAME vis_decode COMMAND $<TARGET_FILE:test_vis_decode>)
+add_test(NAME decode_images
+    COMMAND $<TARGET_FILE:test_decode_images>
+            ${CMAKE_CURRENT_SOURCE_DIR}/audio
+            --mae-limit 60)
+set_tests_properties(decode_images PROPERTIES TIMEOUT 600)
+
+add_test(NAME decode_modes
+    COMMAND $<TARGET_FILE:test_decode_modes>
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_modes)
+set_tests_properties(decode_modes PROPERTIES TIMEOUT 3600)
 
 # Optional: JSON test fixture validation
 if(NOT WIN32)
