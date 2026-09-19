@@ -52,11 +52,12 @@ typedef struct sstv_decoder_s sstv_decoder_t;
 /**
  * Decoder internal state (not exposed in public API, but documented for reference)
  * 
- * Key components:
- * - FM demod: CIIRTANK resonators at mark/space tones + PLL frequency tracking
- * - Sync detection: CIIRTANK at sync frequency (1200 Hz) with state machine
- * - VIS decode: Sync interrupt tracking with bit-by-bit accumulation
- * - Image buffer: Line-by-line grayscale pixel storage
+ * Key components (see docs/specs/decoder.md):
+ * - Front end: 2-tap average, FIR band-pass, CLVL level AGC, x32 limiter
+ * - FM demod: CHILL Hilbert-transform demodulator for the picture signal
+ * - Tone detection: CIIRTANK resonators at 1080/1200/1320/1900/2100 Hz
+ * - VIS decode: MMSSTV's state machine; narrow modes use the FSK N-VIS header
+ * - Image: line-by-line, re-locked to the sync pulse every line, output RGB24
  */
 
 /**
@@ -212,7 +213,7 @@ void sstv_decoder_set_debug_level(sstv_decoder_t *dec, int level);
  * Enable intermediate WAV file writing for filter analysis
  *
  * Writes audio samples at different stages of the processing pipeline:
- * - before: After initial LPF, before BPF (shows raw input with anti-aliasing)
+ * - before: After the 2-tap input average, before the band-pass filter
  * - after_bpf: After bandpass filter (shows filtered signal)
  * - after_agc: After AGC normalization (shows gain-adjusted signal)
  * - final: After final scaling, input to tone detectors (working signal)

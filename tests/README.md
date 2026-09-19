@@ -19,7 +19,7 @@ the runtime output directory), so they can also be run directly, e.g.
 | --- | --- | --- | --- |
 | `vis_codes` | `test_vis_codes.c` | Built-in table of the 43 modes' VIS bytes: every standard 8-bit code has an even number of ones (bit 7 is the parity bit). Prints each code's LSB-first bits and tones (1100 Hz = 1, 1300 Hz = 0). Does not call the library. The build also checks that `vis_codes.json` is valid JSON (needs `python3`). | – |
 | `encode_smoke` | `test_encode_smoke.c` | Encodes Scottie 1 at 48 kHz; the generated length is within 1000 samples of `sstv_encoder_get_total_samples()` and the output is not silent. | – |
-| `dsp_reference` | `test_dsp_reference.cpp` | 17 tests of the DSP primitives in `src/dsp_filters.cpp` (resonator coefficients, Butterworth IIR, FIR/Hilbert tap symmetry, LPF/HPF/BPF/notch cuts, stability). See [docs/DSP_CONSOLIDATED_GUIDE.md](../docs/DSP_CONSOLIDATED_GUIDE.md). | – |
+| `dsp_reference` | `test_dsp_reference.cpp` | 17 tests of the DSP primitives in `src/dsp_filters.cpp` (resonator coefficients, Butterworth IIR, FIR/Hilbert tap symmetry, LPF/HPF/BPF/notch cuts, stability). See [the DSP primitives guide](../docs/specs/dsp-primitives.md). | – |
 | `decoder_basic` | `test_decoder_basic.c` | Decoder lifecycle: create/free, invalid sample rate, feeding silence and a 1200 Hz tone, reset, mode hint, `get_image` before an image exists. | – |
 | `vis_decode` | `test_vis_decode.c` | 11 synthetic VIS headers are identified correctly. The synthetic tones sit at the detector centres (1080/1320 Hz) rather than the transmitted 1100/1300 Hz, so this also shows the detectors tolerate a 20 Hz offset. | – |
 | `roundtrip` | `test_roundtrip.cpp` | **Main regression test.** (1) Encoder tones are exact (VIS 1100/1300 Hz, sync 1200 Hz, black 1500 Hz). (2) For all 43 modes at 11025 Hz: predicted sample count within ±2, the decoder detects the mode from the header alone (VIS, 16-bit VIS or N-VIS, no hint), decodes every line, and the image MAE against the encoded colour bars is < 25 (B/W modes are compared with luma). (3) A transmission sampled +500 ppm fast (Martin 1, Scottie 1, PD120) still decodes with MAE < 25. | – |
@@ -44,7 +44,7 @@ All 9 registered tests pass.
 | Program | Usage | Purpose |
 | --- | --- | --- |
 | `test_vis_decode_wav` | `test_vis_decode_wav <input.wav> <expected_mode> [--debug N] [--tone-offset HZ]` | VIS detection on an external 16-bit mono WAV. |
-| `test_hf_impairments` | `test_hf_impairments <input.wav> [output_dir] [snr_db] [--dsp-only]` | Adds HF noise, fading and hum to a clean recording and writes the signal after each stage of a stand-alone copy of the front end. See [docs/HF_IMPAIRMENTS_TEST_GUIDE.md](../docs/HF_IMPAIRMENTS_TEST_GUIDE.md). |
+| `test_hf_impairments` | `test_hf_impairments <input.wav> [output_dir] [snr_db] [--dsp-only]` | Adds HF noise, fading and hum to a clean recording and writes the signal after each stage of a stand-alone copy of the front end. See [the HF impairment test guide](../docs/guide/hf-impairment-testing.md). |
 
 ## Fixtures
 

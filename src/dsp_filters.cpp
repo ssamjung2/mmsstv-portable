@@ -10,7 +10,7 @@
  *  - DoFIR: lightweight FIR evaluate with circular buffer
  *
  * Tests: tests/test_dsp_reference.cpp
- * Consolidated documentation: docs/DSP_CONSOLIDATED_GUIDE.md
+ * Consolidated documentation: docs/specs/dsp-primitives.md
  */
 
 #include "dsp_filters.h"

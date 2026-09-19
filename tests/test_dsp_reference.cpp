@@ -760,7 +760,7 @@ int main() {
     std::printf("================================================================================\n");
     std::printf("              DSP REFERENCE VECTOR TESTS FOR SSTV DECODER\n");
     std::printf("================================================================================\n");
-    std::printf("Reference: docs/DSP_CONSOLIDATED_GUIDE.md for end-to-end DSP documentation\n");
+    std::printf("Reference: docs/specs/dsp-primitives.md for end-to-end DSP documentation\n");
     std::printf("================================================================================\n");
 
     // CIIRTANK tests
