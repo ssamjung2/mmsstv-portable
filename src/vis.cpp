@@ -13,10 +13,11 @@
  *   Data bits   LSB first, 30 ms each: 1100 Hz = 1, 1300 Hz = 0
  *   Stop bit    1200 Hz   30 ms
  *
- * Standard VIS sends 8 data bits whose bit 7 is the (even) parity bit, e.g.
- * Robot 36 = 0x88 = code 0x08 + parity: 910 ms in total.
+ * Standard VIS sends 8 data bits whose bit 7 is the parity bit (even parity,
+ * e.g. Robot 36 = 0x88 = code 0x08 + parity; MMSSTV sends B/W 12 as 0x86,
+ * which is odd): 910 ms in total.
  * MMSSTV's MR/MP/ML modes send a 16-bit code (0x23 low byte first, then the
- * mode byte, each carrying its own parity in bit 7): 1150 ms in total.
+ * mode byte, each with odd parity in bit 7): 1150 ms in total.
  */
 
 #include "vis.h"

@@ -1,3 +1,12 @@
+> **Source note (2026-09-18):** verbatim excerpt from the SSTV Handbook
+> (docs/sstv-handbook.pdf, §4.2.5), kept as reference. This library, like
+> MMSSTV, implements only **AVT 90** in its normal variant (no narrow or QRM
+> variants): 320×240 (the Handbook lists 256×240), R–G–B at 125 ms per
+> channel with no line sync, VIS 0x44 sent three times, then the 32-frame
+> digital header described below. The decoder does not decode that header;
+> it computes the image start from the first VIS. See
+> [ENCODER.md](ENCODER.md) and [DECODER_STATUS.md](DECODER_STATUS.md).
+
 4.2.5 Amiga Video Transceiver
 AVT modes were originally intended for SSTV operations with Amiga computers.
 AVT author Ben B. Williams, AA7AS developed a dedicated interface and software

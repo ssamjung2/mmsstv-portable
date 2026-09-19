@@ -1,5 +1,13 @@
 # SSTV Encoder Timing Fixes - Final Resolution (January 30-31, 2026)
 
+> **Historical record, not maintained.** This is an encoder timing-fix report from January 30–31, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The three fixes described (floating-point VCO increments, 1100 Hz VCO base with a 1200 Hz span, and the trailing 1500 Hz porch after the red channel in Martin modes) are in the current code: `src/vco.cpp` and `write_line_mrt` in `src/encoder.cpp`.
+> - The channel times shown (73.216 ms) are Martin 2's; Martin 1 channels are 146.432 ms. The line numbers in the "Files Modified" table are out of date.
+> - The WAV files listed under `/tmp` and `~/Desktop` were local outputs and are not in the repository.
+
 ## Problem Summary
 
 SSTV decoder testing revealed incorrect skew and phasing in decoded images at both 44100 Hz and 48000 Hz sample rates:

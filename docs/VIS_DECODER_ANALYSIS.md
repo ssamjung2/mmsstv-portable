@@ -1,5 +1,12 @@
 # VIS Decoder Analysis - MMSSTV vs mmsstv-portable
 
+> **Historical record, not maintained.** This is a VIS decoder analysis from early 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - MMSSTV transmits VIS bits as 1100 Hz = 1 and 1300 Hz = 0. 1080 and 1320 Hz are only the receiver's detector centres (80 Hz bandwidth). See [FREQUENCY_ANALYSIS.md](FREQUENCY_ANALYSIS.md). The encoder correctly transmits 1100/1300 Hz.
+> - MMSSTV's VIS decoding is at `sstv.cpp:1889–2125` in the UTF-8 converted source; see [MMSSTV_ARCHITECTURE_ANALYSIS.md](MMSSTV_ARCHITECTURE_ANALYSIS.md).
+
 ## Analysis of Original MMSSTV Code
 
 ### VIS Decoder Implementation in MMSSTV (sstv.cpp lines 1974-2010)

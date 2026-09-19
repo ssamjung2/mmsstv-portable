@@ -913,6 +913,7 @@ static void decoder_reset_state(sstv_decoder_t *dec) {
     if (!dec) return;
     
     /* Reset sync/VIS state machine (MMSSTV) */
+    dec->detected_mode = SSTV_MODE_COUNT;
     dec->sync_state = SYNC_IDLE;
     dec->sync_mode = 0;
     dec->sync_time = 0;

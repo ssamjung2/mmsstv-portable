@@ -1,5 +1,15 @@
 # Production-Ready SSTV Library Plan
 
+## Status (2026-09-18)
+
+| Workstream | Done | Open |
+| --- | --- | --- |
+| A. Decoder quality | All 43 modes decode (round-trip MAE ≤ 16); per-line sync re-lock fixed; timing correction reworked as an integral term (straight images at +1000 ppm); Scottie sync tracking enabled; Robot 36 colour; narrow modes auto-detected (N-VIS); `finish()` and `reset()` behave correctly; `get_state()` reports timing error and correction. | Residual horizontal offsets of a few pixels in some modes; AVT digital header not decoded; no AFC. See [DECODER_STATUS.md](DECODER_STATUS.md). |
+| B. API | create / free / reset / feed / finish / get_image / get_state; mode hint; timing-correction controls. | WAV/buffer decode helper, C++ wrapper, progress/completion callbacks. |
+| C. CLI | `decode_wav`, `decode_wav_debug`, `evaluate_decoded_images` (see [README.md](README.md)). | Option flags (`--mode-hint`, `--timing-gain`, `--agc-mode`, `--json-summary`, output formats), batch decode. |
+| D. Testing | `test_roundtrip` (all modes, clock mismatch, decoder reuse) plus the recorded-audio suites; see [tests/README.md](../tests/README.md). | Single-command CI script; malformed-input and performance tests. |
+| E. Packaging and docs | CMake install of both libraries and headers; reference docs rewritten to match the code. | pkg-config file covers the encoder only; release artefacts. |
+
 ## 1. Purpose
 
 This document turns the original porting and RX decoder work into a concrete production roadmap for the mmsstv-portable library. It preserves the original objectives of the project while adding the refinements needed for a reliable, user-friendly, and maintainable release.

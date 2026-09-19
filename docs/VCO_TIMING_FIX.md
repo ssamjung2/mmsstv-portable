@@ -1,5 +1,12 @@
 # SSTV Timing Fixes - Complete Resolution (January 30-31, 2026)
 
+> **Historical record, not maintained.** This is an earlier draft of [SSTV_TIMING_FIXES_FINAL.md](SSTV_TIMING_FIXES_FINAL.md) from January 30–31, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - Issue 2 is wrong: all three Martin channels have the same scan time. The red channel is not 73.788 ms; the extra 0.572 ms is the trailing 1500 Hz porch after red. MMSSTV's `m_SG` is a receive-side offset (the start of the second channel), not a transmit scan time. See [ENCODER.md](ENCODER.md).
+> - The VCO fix (1100 Hz base, 1200 Hz span) is correct and is in `src/vco.cpp`.
+
 ## Problem Summary
 
 SSTV decoder testing revealed incorrect skew and phasing in decoded images at both 44100 Hz and 48000 Hz sample rates. The decoded images showed:

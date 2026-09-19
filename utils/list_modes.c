@@ -35,11 +35,11 @@ void test_vis_encoder(void) {
         for (int i = 0; i < 8; i++) {
             printf("%d", (vis >> i) & 1);
         }
-        printf("\n  Parity: %d (even)\n", parity);
+        printf("\n  Parity of all 8 bits: %d (bit 7 is the parity bit; standard VIS uses even parity)\n", parity);
         printf("  Frequencies: ");
         for (int i = 0; i < 8; i++) {
             int bit = (vis >> i) & 1;
-            printf("bit%d=%dHz ", i, bit ? 1300 : 1100);
+            printf("bit%d=%dHz ", i, bit ? 1100 : 1300);   /* MMSSTV: 1 = 1100 Hz */
         }
         printf("\n\n");
     }
@@ -49,10 +49,10 @@ void test_vis_encoder(void) {
     printf("  2. Break:     1200 Hz ×  10ms\n");
     printf("  3. Leader:    1900 Hz × 300ms\n");
     printf("  4. Start bit: 1200 Hz ×  30ms\n");
-    printf("  5. Data (8b): 1100/1300 Hz × 30ms each\n");
-    printf("  6. Parity:    1100/1300 Hz × 30ms\n");
-    printf("  7. Stop bit:  1200 Hz ×  30ms\n");
-    printf("  Total: ~640ms\n");
+    printf("  5. Data (8b): 30ms each, LSB first, 1 = 1100 Hz, 0 = 1300 Hz\n");
+    printf("               (bit 7 is the parity bit; no separate parity tone)\n");
+    printf("  6. Stop bit:  1200 Hz ×  30ms\n");
+    printf("  Total: 910ms (16-bit MR/MP/ML VIS: 1150ms)\n");
 }
 
 /* VCO oscillator test - verify tone generation */
@@ -62,8 +62,8 @@ void test_vco(void) {
     printf("VCO Parameters:\n");
     printf("  Sample rate: 48000 Hz\n");
     printf("  Sine table size: 96000 (2 × sample_rate)\n");
-    printf("  Center frequency: 1900 Hz\n");
-    printf("  Frequency range: 1500-2300 Hz (SSTV spec)\n");
+    printf("  Base frequency: 1100 Hz, span 1200 Hz (MMSSTV CSSTVMOD)\n");
+    printf("  Frequency range: 1100-2300 Hz (video 1500-2300 Hz)\n");
     printf("  Black level: 1500 Hz\n");
     printf("  White level: 2300 Hz\n");
     printf("  Sync pulse: 1200 Hz\n\n");
@@ -76,8 +76,8 @@ void test_vco(void) {
     
     printf("VIS Code Frequencies:\n");
     printf("  Sync/Start/Stop: 1200 Hz\n");
-    printf("  Bit 0: 1100 Hz\n");
-    printf("  Bit 1: 1300 Hz\n");
+    printf("  Bit value 1: 1100 Hz\n");
+    printf("  Bit value 0: 1300 Hz\n");
     printf("  Leader: 1900 Hz\n");
 }
 
@@ -131,7 +131,7 @@ int main(void) {
     printf("✓ Mode definitions: 43 modes loaded\n");
     printf("✓ VIS encoder: Implemented and tested\n");
     printf("✓ VCO oscillator: Implemented and tested\n");
-    printf("⏸ Main encoder: Pending implementation\n");
+    printf("✓ Main encoder: Implemented (see tests/test_roundtrip.cpp)\n");
     
     return 0;
 }

@@ -4,8 +4,10 @@
  * This test program loads VIS test fixtures from JSON and validates:
  * 1. VIS code to binary conversion (LSB-first)
  * 2. Bit frequency mapping (MMSSTV / SSTV Handbook: 1100 Hz = 1, 1300 Hz = 0)
- * 3. Parity: bit 7 of the 8-bit code is the parity bit, so every valid
- *    standard code has an even number of ones
+ * 3. Parity: bit 7 of the 8-bit code is the parity bit. Standard codes use
+ *    even parity; MMSSTV's MR/MP/ML bytes use odd parity (SSTV Handbook
+ *    4.4.3) and MMSSTV sends B/W 12 as 0x86 (odd). The expected parity of
+ *    each code is in the table below
  * 4. Complete VIS sequence timing (910 ms total)
  */
 

@@ -1,6 +1,6 @@
 # Filter Implementation Verification Report
 
-**Date:** February 20, 2026  
+**Date:** February 20, 2026 (parameters and line references updated 2026-09-18)  
 **Status:** Complete Code-Level Verification  
 **Purpose:** Line-by-line comparison of mmsstv-portable filters against MMSSTV reference
 
@@ -12,7 +12,7 @@ This document provides a comprehensive, function-by-function verification that t
 
 **Verification Result:** ✅ **ALGORITHMIC EXACT MATCH** - All filter algorithms are mathematically identical to MMSSTV.
 
-**One Parameter Difference Identified:** HBPF lower cutoff frequency (1080 Hz vs MMSSTV's 1100-1200 Hz) - this is an **intentional design choice** to optimize VIS code detection reliability. See §8.4 for detailed analysis.
+**Parameters:** all filter parameters match MMSSTV. (Until 2026-09-18 the HBPF low edge was 1080 Hz; it is now MMSSTV's 1100 Hz, see §8.4.)
 
 ---
 
@@ -76,7 +76,7 @@ static double I0(double x) {
 ### Verification
 
 | Aspect | MMSSTV | mmsstv-portable | Match |
-|--------|---------|-----------------|-------|
+| --- | --- | --- | --- |
 | Initialization | `sum = 1.0; xj = 1.0; j = 1` | `sum = 1.0; xj = 1.0; int j = 1` | ✅ Identical |
 | Iteration | `xj *= ((0.5 * x) / (double)j)` | `xj *= ((0.5 * x) / static_cast<double>(j))` | ✅ Identical |
 | Accumulation | `sum += (xj*xj)` | `sum += (xj * xj)` | ✅ Identical |
@@ -328,7 +328,7 @@ for (h = &temp[1], j = 1; j <= (fp->n / 2); j++, h++) {
 ### Purpose
 Generates FIR Hilbert transform coefficients for I/Q (complex) signal processing.
 
-### MMSSTV Implementation (fir.cpp:426-460)
+### MMSSTV Implementation (fir.cpp:432-474)
 
 ```cpp
 void MakeHilbert(double *H, int N, double fs, double fc1, double fc2)
@@ -419,7 +419,7 @@ void MakeHilbert(double *h, int n, double fs, double fc1, double fc2) {
 ### Verification
 
 | Component | MMSSTV | mmsstv-portable | Match |
-|-----------|---------|-----------------|-------|
+| --- | --- | --- | --- |
 | Window | Hamming: 0.54 - 0.46·cos(2πn/N) | Same | ✅ |
 | Impulse response | -(2fc₂T·SA(nω₂T) - 2fc₁T·SA(nω₁T))·w[n] | Same | ✅ |
 | Normalization | L1 norm for N<8 | Same | ✅ |
@@ -546,7 +546,7 @@ void MakeIIR(double *a, double *b, double fc, double fs, int order, int bc, doub
 ### Verification
 
 | Component | Formula | Match |
-|-----------|---------|-------|
+| --- | --- | --- |
 | Bilinear transform | ω_a = tan(πf_c/f_s) | ✅ |
 | Butterworth poles | ζ = cos(nπ/2N) | ✅ |
 | Chebyshev poles | Complex calculation with sinh/cosh | ✅ |
@@ -563,7 +563,7 @@ void MakeIIR(double *a, double *b, double fc, double fs, int order, int bc, doub
 ### Purpose
 2nd-order IIR resonator ("tank circuit") for tone detection. Most critical filter for SSTV performance.
 
-### MMSSTV Implementation (fir.cpp:616-650)
+### MMSSTV Implementation (fir.cpp:40-74)
 
 ```cpp
 CIIRTANK::CIIRTANK()
@@ -643,7 +643,7 @@ $$H(z) = \frac{a_0}{1 - b_1 z^{-1} - b_2 z^{-2}}$$
 **Coefficient Formulas:**
 
 | Coefficient | MMSSTV Formula | mmsstv-portable | Match |
-|-------------|----------------|-----------------|-------|
+| --- | --- | --- | --- |
 | b₁ | `2·exp(-π·bw/fs)·cos(2π·f/fs)` | Same | ✅ |
 | b₂ | `-exp(-2π·bw/fs)` | Same | ✅ |
 | a₀ | `sin(2π·f/fs) / ((fs/6.0)/bw)` | Same | ✅ |
@@ -676,7 +676,7 @@ For SSTV typical values (f=1200Hz, BW=100Hz, fs=48kHz):
 ### Purpose
 Implements cascaded biquad IIR filters (Butterworth/Chebyshev). Used for 50 Hz lowpass after tone detectors.
 
-### MMSSTV Implementation (fir.cpp:1035-1063)
+### MMSSTV Implementation (fir.cpp:1029-1059)
 
 ```cpp
 void CIIR::MakeIIR(double fc, double fs, int order, int bc, double rp)
@@ -753,7 +753,7 @@ double CIIR::Do(double d) {
 **Structure:** Direct Form II Transposed
 
 **Biquad Section:**
-```
+```text
 d += z[0]·a[1] + z[1]·a[2]     // Feedback
 o = d·b[0] + z[0]·b[1] + z[1]·b[0]  // Feedforward
 z[1] = z[0]
@@ -762,7 +762,7 @@ d = o
 ```
 
 | Aspect | MMSSTV | mmsstv-portable | Match |
-|--------|---------|-----------------|-------|
+| --- | --- | --- | --- |
 | Feedback | `pZ[0]*pA[1] + pZ[1]*pA[2]` | Same | ✅ |
 | Feedforward | `d*pB[0] + pZ[0]*pB[1] + pZ[1]*pB[0]` | Same | ✅ |
 | State update | `pZ[1]=pZ[0]; pZ[0]=d` | Same | ✅ |
@@ -782,7 +782,7 @@ This is a **safety improvement**, not an algorithm change.
 ### Purpose
 Efficient FIR filter implementation using circular buffer to avoid copying. Used for BPF filters.
 
-### MMSSTV Implementation (fir.cpp:1089-1163)
+### MMSSTV Implementation (fir.cpp:1063-1144)
 
 ```cpp
 void __fastcall CFIR2::Create(int tap)
@@ -856,7 +856,7 @@ double CFIR2::Do(double d, double *hp) {
 - Increment W, wrap at N
 
 | Aspect | MMSSTV | mmsstv-portable | Match |
-|--------|---------|-----------------|-------|
+| --- | --- | --- | --- |
 | Buffer size | `new double[(tap+1)*2]` | `z_.assign((tap+1)*2, 0.0)` | ✅ |
 | Write position | `dp1 = &m_pZ[m_W+m_Tap+1]` | `dp1 = &z_[w_+tap_+1]` | ✅ |
 | Mirror write | `m_pZ[m_W] = d` | `z_[w_] = d` | ✅ |
@@ -883,7 +883,7 @@ m_iir13.SetFreq(1320 + g_dblToneOffset, SampFreq, 80.0);
 m_iir19.SetFreq(1900 + g_dblToneOffset, SampFreq, 100.0);
 ```
 
-**mmsstv-portable decoder.cpp:354-357:**
+**mmsstv-portable (`sstv_decoder_create`, decoder.cpp):**
 ```cpp
 dec->iir11.SetFreq(1080.0, sample_rate, 80.0);
 dec->iir12.SetFreq(1200.0, sample_rate, 100.0);
@@ -892,7 +892,7 @@ dec->iir19.SetFreq(1900.0, sample_rate, 100.0);
 ```
 
 | Resonator | Frequency | Bandwidth | Q Factor | Match |
-|-----------|-----------|-----------|----------|-------|
+| --- | --- | --- | --- | --- |
 | iir11 (mark) | 1080 Hz | 80 Hz | 13.5 | ✅ |
 | iir12 (sync) | 1200 Hz | 100 Hz | 12.0 | ✅ |
 | iir13 (space) | 1320 Hz | 80 Hz | 16.5 | ✅ |
@@ -912,7 +912,7 @@ m_lpf13.MakeIIR(50, SampFreq, 2, 0, 0);
 m_lpf19.MakeIIR(50, SampFreq, 2, 0, 0);
 ```
 
-**mmsstv-portable decoder.cpp:358-361:**
+**mmsstv-portable (`sstv_decoder_create`, decoder.cpp):**
 ```cpp
 dec->lpf11.MakeIIR(50.0, sample_rate, 2, 0, 0);
 dec->lpf12.MakeIIR(50.0, sample_rate, 2, 0, 0);
@@ -921,7 +921,7 @@ dec->lpf19.MakeIIR(50.0, sample_rate, 2, 0, 0);
 ```
 
 | Parameter | Value | Description | Match |
-|-----------|-------|-------------|-------|
+| --- | --- | --- | --- |
 | fc | 50 Hz | Cutoff frequency | ✅ |
 | order | 2 | 2nd-order (1 biquad) | ✅ |
 | bc | 0 | Butterworth (not Chebyshev) | ✅ |
@@ -941,22 +941,21 @@ MakeFilter(H1, bpftap, ffBPF, SampFreq, lfq, 2600 + g_dblToneOffset, 20, 1.0);
 MakeFilter(H2, bpftap, ffBPF, SampFreq, lfq2, 2500 + g_dblToneOffset, 20, 1.0);
 ```
 
-MMSSTV uses **mode-dependent lower frequencies:**
-- `lfq = 1100 Hz (SyncRestart mode) or 1200 Hz (normal)` - HBPF lower cutoff
-- `lfq2 = 400 Hz` - HBPFS  lower cutoff
+MMSSTV's HBPF lower cutoff is `lfq = m_SyncRestart ? 1100 : 1200` Hz. `m_SyncRestart`
+defaults to 1 (`sstv.cpp:1486`), so HBPF is 1100–2600 Hz. HBPFS starts at `lfq2 = 400` Hz.
 
-**mmsstv-portable decoder.cpp:364-371:**
+**mmsstv-portable (`sstv_decoder_create`, decoder.cpp):**
 ```cpp
 dec->bpftap = (int)(24.0 * sample_rate / 11025.0);
 sstv_dsp::MakeFilter(dec->hbpf.data(), dec->bpftap, sstv_dsp::kFfBPF, 
-                     sample_rate, 1080.0, 2600.0, 20.0, 1.0);
+                     sample_rate, 1100.0, 2600.0, 20.0, 1.0);
 sstv_dsp::MakeFilter(dec->hbpfs.data(), dec->bpftap, sstv_dsp::kFfBPF, 
                      sample_rate, 400.0, 2500.0, 20.0, 1.0);
 ```
 
 | Filter | MMSSTV Lower | mmsstv-portable Lower | Upper | Taps @ 48kHz | Att | Gain | Match |
-|--------|--------------|----------------------|-------|--------------|-----|------|-------|
-| HBPF | 1100-1200 Hz (mode-dependent) | **1080 Hz (fixed)** | 2600 Hz | 104 | 20 dB | 1.0 | ⚠️ Different |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| HBPF | 1100 Hz (`m_SyncRestart` = 1) | 1100 Hz | 2600 Hz | 104 | 20 dB | 1.0 | ✅ Match |
 | HBPFS | 400 Hz | 400 Hz | 2500 Hz | 104 | 20 dB | 1.0 | ✅ Match |
 
 **Tap Calculation:**
@@ -964,45 +963,20 @@ sstv_dsp::MakeFilter(dec->hbpfs.data(), dec->bpftap, sstv_dsp::kFfBPF,
 - @ 48000 Hz: `tap = 24 × 48000 / 11025 = 104.48 → 104 taps`
 - @ 11025 Hz: `tap = 24 × 11025 / 11025 = 24 taps`
 
-**Result:** ⚠️ **PARAMETERS MOSTLY MATCH** (See section 8.4 for BPF frequency discrepancy analysis)
+**Result:** ✅ **PARAMETERS MATCH**
 
-### 8.4 BPF Frequency Discrepancy Analysis
+Note: att = 20 dB is below the 21 dB Kaiser threshold, so both MMSSTV and this
+port design these filters with a rectangular window (measured stop band about
+−25 to −28 dB; see [FILTER_SPECIFICATIONS.md](FILTER_SPECIFICATIONS.md)).
 
-**IMPORTANT FINDING:** mmsstv-portable uses a **different HBPF lower frequency** than MMSSTV:
+### 8.4 HBPF lower cutoff (resolved)
 
-| Implementation | HBPF Lower Cutoff | Rationale |
-|----------------|-------------------|-----------|
-| **MMSSTV** | 1100 Hz (SyncRestart) or 1200 Hz (normal) | Optimized for image scanning (1500-2300 Hz), relies on mode switching |
-| **mmsstv-portable** | **1080 Hz (fixed)** | Optimized for VIS detection, captures full SSTV tone range including mark (1080 Hz) |
-
-**Frequency Context:**
-- **MMSSTV standard tones:** Mark = 1080 Hz, Sync = 1200 Hz, Space = 1320 Hz
-- **Image data:** 1500-2300 Hz (black to white)
-
-**Analysis:**
-
-1. **MMSSTV's approach (1100-1200 Hz lower bound):**
-   - ⚠️ **Attenuates 1080 Hz mark tone** (20-40 dB rejection below passband)
-   - ✅ Reduces out-of-band noise below 1100 Hz
-   - ✅ Optimized for image scanning where tones are 1500+ Hz
-   - Requires mode switching or filter bypass for VIS detection
-
-2. **mmsstv-portable's approach (1080 Hz lower bound):**
-   - ✅ **Full passband for VIS tones** (1080/1200/1320 Hz all in passband)
-   - ✅ Single filter configuration for VIS + image scanning
-   - ⚠️ Allows more low-frequency noise (1080-1200 Hz band)
-   - Simplified decoder logic (no mode switching)
-
-**Impact:**
-- This is an **intentional design difference**, not a bug
-- mmsstv-portable prioritizes **VIS code reliability** over absolute S/N optimization
-- The 120 Hz wider passband (1080 vs 1200 Hz) adds minimal noise: ~0.3 dB
-- **Decoder compatibility:** mmsstv-portable can decode MMSSTV signals correctly
-- **Encoder output:** Both produce identical 1080/1320 Hz FSK tones
-
-**Verdict:** ⚠️ **DELIBERATE DESIGN CHOICE** - Functionally equivalent with different tradeoffs
-
-The filter algorithms are **mathematically identical**; only the **parameter selection** differs for system-level reasons.
+Until 2026-09-18 the port used 1080 Hz for the HBPF low edge, justified as
+keeping a "1080 Hz mark tone" in the pass band. That rationale was wrong:
+MMSSTV transmits VIS bits at 1100/1300 Hz (1080/1320 Hz are only the receive
+detector centres, see [FREQUENCY_ANALYSIS.md](FREQUENCY_ANALYSIS.md)), and
+HBPF is only used after the VIS, while an image is decoded. The port now uses
+MMSSTV's 1100 Hz.
 
 ---
 
@@ -1059,26 +1033,26 @@ All critical calculations use:
 ## 10. Summary Matrix
 
 | Component | Lines (MMSSTV) | Lines (portable) | Algorithm Match | Parameter Match |
-|-----------|----------------|------------------|-----------------|-----------------|
-| I0 Bessel | fir.cpp:310-323 | dsp_filters.cpp:27-39 | ✅ Exact | ✅ |
-| MakeFilter (Kaiser FIR) | fir.cpp:331-421 | dsp_filters.cpp:69-145 | ✅ Exact | ✅ |
-| MakeHilbert | fir.cpp:426-460 | dsp_filters.cpp:148-175 | ✅ Exact | ✅ |
-| MakeIIR (Butterworth/Cheby) | fir.cpp:953-1005 | dsp_filters.cpp:192-240 | ✅ Exact | ✅ |
-| CIIRTANK::SetFreq | fir.cpp:620-633 | dsp_filters.cpp:248-260 | ✅ Exact | ✅ |
-| CIIRTANK::Do | fir.cpp:636-645 | dsp_filters.cpp:263-270 | ✅ Exact | ✅ |
-| CIIR::MakeIIR | fir.cpp:1029-1034 | dsp_filters.cpp:284-291 | ✅ Exact | ✅ |
-| CIIR::Do | fir.cpp:1036-1053 | dsp_filters.cpp:294-317 | ✅ Exact | ✅ |
-| CFIR2::Create | fir.cpp:1061-1074 | dsp_filters.cpp:323-332 | ✅ Exact* | ✅ |
-| CFIR2::Do | fir.cpp:1115-1130 | dsp_filters.cpp:359-371 | ✅ Exact* | ✅ |
-| HBPF Parameters | sstv.cpp:1524-1531 | decoder.cpp:370 | N/A | ⚠️ Different† |
-| HBPFS Parameters | sstv.cpp:1524-1531 | decoder.cpp:371 | N/A | ✅ |
-| CIIRTANK Parameters | sstv.cpp:1446-1449 | decoder.cpp:354-357 | N/A | ✅ |
-| CIIR Parameters | sstv.cpp:1450-1453 | decoder.cpp:358-361 | N/A | ✅ |
+| --- | --- | --- | --- | --- |
+| I0 Bessel | fir.cpp:310 | dsp_filters.cpp:28 | ✅ Exact | ✅ |
+| MakeFilter (Kaiser FIR) | fir.cpp:346 | dsp_filters.cpp:68 | ✅ Exact | ✅ |
+| MakeHilbert | fir.cpp:432 | dsp_filters.cpp:146 | ✅ Exact | ✅ |
+| MakeIIR (Butterworth/Cheby) | fir.cpp:953 | dsp_filters.cpp:192 | ✅ Exact | ✅ |
+| CIIRTANK::SetFreq | fir.cpp:46 | dsp_filters.cpp:248 | ✅ Exact | ✅ |
+| CIIRTANK::Do | fir.cpp:65 | dsp_filters.cpp:263 | ✅ Exact | ✅ |
+| CIIR::MakeIIR | fir.cpp:1029 | dsp_filters.cpp:286 | ✅ Exact | ✅ |
+| CIIR::Do | fir.cpp:1037 | dsp_filters.cpp:296 | ✅ Exact | ✅ |
+| CFIR2::Create | fir.cpp:1079 | dsp_filters.cpp:323 | ✅ Exact* | ✅ |
+| CFIR2::Do | fir.cpp:1131 | dsp_filters.cpp:371 | ✅ Exact* | ✅ |
+| HBPF / HBPFS parameters | sstv.cpp:1522 (`CalcBPF`) | decoder.cpp `sstv_decoder_create` | N/A | ✅ |
+| CIIRTANK / CIIR parameters | sstv.cpp:1446–1455 | decoder.cpp `sstv_decoder_create` | N/A | ✅ |
+
+Function start lines, as of 2026-09-18 (MMSSTV line numbers refer to the
+Shift-JIS source converted to UTF-8; the line count is unchanged).
 
 **Legend:**
 - ✅ Exact = Mathematically identical algorithm
 - ✅ Exact* = Identical algorithm with C++ modernization (std::vector vs new/delete)
-- ⚠️ Different† = Intentional design difference (HBPF: 1080 Hz vs 1100-1200 Hz lower cutoff, see §8.4)
 
 ---
 
@@ -1091,9 +1065,9 @@ All critical calculations use:
 All DSP filter implementations in mmsstv-portable have been verified against MMSSTV source code at the line-by-line level:
 
 ✅ **All algorithms are mathematically identical**  
-⚠️ **One parameter difference:** HBPF lower cutoff (1080 Hz vs 1100-1200 Hz) - intentional design choice (see §8.4)  
+✅ **All filter parameters match MMSSTV** (HBPF 1100–2600 Hz, HBPFS 400–2500 Hz, resonators, LPFs)  
 ✅ **All numerical precision matches**  
-✅ **All frequency responses identical** (except HBPF 120 Hz lower extension)
+✅ **All frequency responses identical**
 
 ### 11.2 Implementation Quality
 
@@ -1114,29 +1088,27 @@ All DSP filter implementations in mmsstv-portable have been verified against MMS
 ### 11.3 Performance Characteristics
 
 | Filter | MMSSTV | mmsstv-portable | Difference |
-|--------|---------|-----------------|------------|
+| --- | --- | --- | --- |
 | CIIRTANK (per sample) | 5 ops | 5 ops | None |
 | CIIR 2nd-order (per sample) | 9 ops | 9 ops | None |
 | CFIR2 (per sample) | 2N+5 ops | 2N+5 ops | None |
 | Memory overhead | ~3.5 KB | ~3.5 KB | Negligible |
 
-**Result:** Zero performance difference
+**Result:** Same operation counts (not benchmarked)
 
 ### 11.4 Certification
 
 **I hereby certify that:**
 
 1. All DSP filter algorithms in mmsstv-portable **exactly match** MMSSTV reference implementation
-2. All critical filter parameters (CIIRTANK frequencies, bandwidths, Q factors; CIIR cutoffs; tap counts) are **identical**
-3. One design difference exists: HBPF lower cutoff (1080 Hz vs 1100-1200 Hz) - this is **intentional** for VIS detection optimization
-4. All numerical calculations use **identical** formulas and precision
-5. The modernizations (C++ std::vector, namespaces) are **functionally transparent**
-6. There are **zero algorithmic differences** that could affect signal processing accuracy
+2. All critical filter parameters (CIIRTANK frequencies and bandwidths; CIIR cutoffs; BPF edges and tap counts) are **identical**
+3. All numerical calculations use **identical** formulas and precision
+4. The modernizations (C++ std::vector, namespaces) are **functionally transparent**
+5. There are **zero algorithmic differences** that could affect signal processing accuracy
 
 **Conclusion:** mmsstv-portable DSP filters are a **faithful, exact port** of MMSSTV filters with:
 - ✅ 100% algorithmic compatibility
 - ✅ Improved code quality and safety
-- ⚠️ One intentional parameter optimization (HBPF lower frequency)
 - ✅ Practical equivalence for SSTV decoding/encoding
 
 ---
@@ -1152,7 +1124,7 @@ All DSP filter implementations in mmsstv-portable have been verified against MMS
 These changes improve code quality without affecting functionality:
 
 | MMSSTV | mmsstv-portable | Benefit |
-|--------|-----------------|---------|
+| --- | --- | --- |
 | `#define PI 3.14159...` | `constexpr double kPi = 3.14159...` | Type-safe constant |
 | `double *m_pZ; new double[N]` | `std::vector<double> z_` | Automatic memory management |
 | C-style casts `(double)j` | `static_cast<double>(j)` | Type-safe casting |

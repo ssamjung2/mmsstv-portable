@@ -1,5 +1,13 @@
 # 🎉 Session Complete - Phase 5 Wrap-Up & Phase 6 Launch
 
+> **Historical record, not maintained.** This is a session summary from January 30, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - VIS is 910 ms, not 940 ms: the 8 data bits (LSB first, 1100 Hz = 1, 1300 Hz = 0) include the parity bit as bit 7, so there is no separate parity tone. MMSSTV's 16-bit VIS for the MR/MP/ML modes takes 1150 ms. See [ENCODER.md](ENCODER.md).
+> - "Production ready" referred to the encoder. The library now also has a decoder; see [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md) and [DECODER_STATUS.md](DECODER_STATUS.md).
+> - The command-line tools are in `utils/`; there is no `examples/` directory.
+
 **Date**: January 30, 2026  
 **Project**: MMSSTV Encoder-Only Library (mmsstv-portable)  
 **Status**: ✅ **PRODUCTION READY** - Ready for external decoder validation  

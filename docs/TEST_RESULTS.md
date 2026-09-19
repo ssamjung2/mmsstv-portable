@@ -1,5 +1,12 @@
 # MMSSTV Portable Encoder - Test Results
 
+> **Historical record, not maintained.** This is an encoder test report from early 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - VIS is 910 ms, not 940 ms: the 8 data bits (LSB first, 1100 Hz = 1, 1300 Hz = 0) include the parity bit as bit 7, so there is no separate parity tone. MMSSTV's 16-bit VIS for the MR/MP/ML modes takes 1150 ms. See [ENCODER.md](ENCODER.md). At 48 kHz that is 43,680 samples. The "fix" below from 640 ms to 940 ms counted the parity bit twice.
+> - The current test suite (9 registered CTest tests, all passing on 2026-09-18) is described in [tests/README.md](../tests/README.md).
+
 ## Build Status
 ✅ All components compiled successfully
 ✅ All tests passed (2/2)

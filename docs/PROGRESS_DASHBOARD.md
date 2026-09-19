@@ -1,5 +1,12 @@
 # Master Plan Progress Dashboard
 
+> **Historical record, not maintained.** This is a progress dashboard from February 5, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The figures here are out of date: the decoder handles all 43 modes and the DSP reference tests pass 17/17. The current test suite (9 registered CTest tests, all passing on 2026-09-18) is described in [tests/README.md](../tests/README.md).
+> - Open work is tracked in [PRODUCTION_READY_PLAN.md](PRODUCTION_READY_PLAN.md).
+
 **mmsstv-portable** — Cross-Platform SSTV Library  
 **Date:** February 5, 2026  
 **Overall Progress:** 35–40% Complete

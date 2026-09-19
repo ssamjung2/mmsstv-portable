@@ -1,5 +1,13 @@
 # Phase 6: External Validation & Decoder Testing Plan
 
+> **Historical record, not maintained.** This is the external-validation plan from January 30, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - VIS is 910 ms, not 940 ms: the 8 data bits (LSB first, 1100 Hz = 1, 1300 Hz = 0) include the parity bit as bit 7, so there is no separate parity tone. MMSSTV's 16-bit VIS for the MR/MP/ML modes takes 1150 ms. See [ENCODER.md](ENCODER.md).
+> - Parity: the 23 standard codes use even parity; the 13 MR/MP/ML mode bytes, the 0x23 prefix and MMSSTV's B/W 12 code (0x86) use odd parity.
+> - Encoder output is now checked in-repo by `test_roundtrip` (encode, decode, compare for all 43 modes). The current test suite (9 registered CTest tests, all passing on 2026-09-18) is described in [tests/README.md](../tests/README.md).
+
 **Date Started**: January 30, 2026  
 **Objective**: Validate all 43 generated WAV files with external SSTV decoders  
 **Target Outcome**: Production-ready encoder ready for public release  

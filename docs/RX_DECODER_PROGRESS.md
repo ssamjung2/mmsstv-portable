@@ -1,5 +1,12 @@
 # RX Decoder Development Progress
 
+> **Historical record, not maintained.** This is a decoder progress report from February 5, 2026 (first prototype). It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The demodulation chain described here (800–3000 Hz band-pass, 1200/2400 Hz detectors, energy-tracking AGC) was replaced by the MMSSTV port. The current decoder front end is: clip at ±24576, 2-tap average, FIR band-pass (HBPFS 400–2500 Hz before VIS, HBPF 1100–2600 Hz after), CLVL AGC, ×32 hard limiter, then CIIRTANK detectors at 1080/1200/1320/1900/2100 Hz and a Hilbert-transform FM demodulator for the picture. See [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md).
+> - Current status: [DECODER_STATUS.md](DECODER_STATUS.md).
+
 **Date:** February 5, 2026  
 **Phase:** A – Minimal Demod Pipeline (MVP)  
 **Status:** Core infrastructure complete, ready for VIS/image implementation

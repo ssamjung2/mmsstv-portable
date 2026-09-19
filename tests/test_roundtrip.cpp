@@ -9,6 +9,8 @@
  *      and the image matches the encoded colour bars.
  *   3. Clock mismatch: a transmission sampled 500 ppm fast still decodes
  *      straight (sync re-lock + timing correction).
+ *   4. Decoder reuse: after sstv_decoder_reset() the same decoder detects and
+ *      decodes a second transmission in a different mode.
  *
  * Exits non-zero on any failure.
  */
@@ -156,6 +158,39 @@ int main(void) {
         bool ok = st.current_mode == mode && mae >= 0.0 && mae < kMaeLimit;
         printf("  %-10s MAE=%6.1f  %s\n", mi->name, mae, ok ? "OK" : "FAIL");
         fails += ok ? 0 : 1;
+    }
+
+    printf("\nDecoder reuse: Martin 2, sstv_decoder_reset(), then Robot 36 (%.0f Hz):\n", fs);
+    {
+        const sstv_mode_t seq[2] = {SSTV_MARTIN2, SSTV_R36};
+        sstv_decoder_t *dec = sstv_decoder_create(fs);
+        for (int r = 0; r < 2; r++) {
+            const sstv_mode_info_t *mi = sstv_get_mode_info(seq[r]);
+            std::vector<unsigned char> img = color_bars(mi->width, mi->height);
+            std::vector<float> a = encode(seq[r], img, fs, NULL);
+            sstv_rx_status_t st = SSTV_RX_NEED_MORE;
+            for (size_t p = 0; p < a.size() && st != SSTV_RX_IMAGE_READY; p += 2048) {
+                size_t n = a.size() - p < 2048 ? a.size() - p : 2048;
+                st = sstv_decoder_feed(dec, &a[p], n);
+            }
+            if (st != SSTV_RX_IMAGE_READY) sstv_decoder_finish(dec);
+            sstv_decoder_state_t s;
+            sstv_decoder_get_state(dec, &s);
+            sstv_image_t out;
+            double mae = -1.0;
+            if (sstv_decoder_get_image(dec, &out) == 0 && out.width == mi->width &&
+                out.height == mi->height) {
+                double err = 0.0;
+                for (size_t i = 0; i < img.size(); i++) err += fabs((double)out.pixels[i] - img[i]);
+                mae = err / img.size();
+            }
+            bool ok = s.current_mode == seq[r] && mae >= 0.0 && mae < kMaeLimit;
+            printf("  %-10s detected=%2d MAE=%6.1f  %s\n", mi->name, (int)s.current_mode, mae,
+                   ok ? "OK" : "FAIL");
+            fails += ok ? 0 : 1;
+            sstv_decoder_reset(dec);
+        }
+        sstv_decoder_free(dec);
     }
 
     printf("\n%s (%d failure%s)\n", fails ? "FAILED" : "ALL PASSED", fails, fails == 1 ? "" : "s");

@@ -1,5 +1,13 @@
 # SSTV VIS Decoder Validation Report
 
+> **Historical record, not maintained.** This is a VIS decoder report from early 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The decoder described (high-pass pre-filter, 800–3000 Hz band-pass, choosing between 1100/1300 and 1080/1320 tone pairs, 800 ms buffered search) is not the current one. VIS decoding now follows MMSSTV's state machine; see [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md).
+> - The 13 source WAV files are not in the repository, so the "mislabeled files" diagnosis cannot be rechecked.
+> - The appendix example is wrong: Robot 36 (0x88) sent LSB first is 0,0,0,1,0,0,0,1, that is 1300, 1300, 1300, 1100, 1300, 1300, 1300, 1100 Hz. MMSSTV transmits VIS bits as 1100 Hz = 1 and 1300 Hz = 0. 1080 and 1320 Hz are only the receiver's detector centres (80 Hz bandwidth). See [FREQUENCY_ANALYSIS.md](FREQUENCY_ANALYSIS.md).
+
 ## Executive Summary
 
 The SSTV VIS (Vertical Interval Signaling) decoder has been successfully implemented and validated against **13 authoritative test WAV files**. The decoder achieves **6/13 correct decodes (46% pass rate)**, with the 7 failures due to **mislabeled source files** and **insufficient audio signal level**, not decoder bugs.

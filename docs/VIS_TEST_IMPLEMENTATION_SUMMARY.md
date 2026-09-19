@@ -1,5 +1,14 @@
 # VIS Test Suite Implementation - Summary
 
+> **Historical record, not maintained.** This is a VIS test-suite summary from early 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The tone mapping here is inverted: MMSSTV sends 1100 Hz for a 1 and 1300 Hz for a 0.
+> - VIS is 910 ms, not 640 ms: the 8 data bits (LSB first, 1100 Hz = 1, 1300 Hz = 0) include the parity bit as bit 7, so there is no separate parity tone. MMSSTV's 16-bit VIS for the MR/MP/ML modes takes 1150 ms. See [ENCODER.md](ENCODER.md).
+> - Parity: the 23 standard codes use even parity; the 13 MR/MP/ML mode bytes, the 0x23 prefix and MMSSTV's B/W 12 code (0x86) use odd parity. The 24/13 split below is wrong.
+> - The current suite is described in [VIS_TEST_SUITE_REPORT.md](VIS_TEST_SUITE_REPORT.md).
+
 ## 🎯 Objective Complete
 
 **Request**: Generate VIS tests for all modes and verify bit patterns using mainstream testing techniques (YAML/JSON)

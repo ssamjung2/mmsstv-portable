@@ -1,5 +1,12 @@
 # DSP Test Results Summary
 
+> **Historical record, not maintained.** This is a DSP test report from February 5, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - All 17 tests in `tests/test_dsp_reference.cpp` now pass (2026-09-18).
+> - CIIRTANK's third parameter is the bandwidth in Hz (Q = centre / bandwidth); the decoder's detectors use 80 or 100 Hz. Measured responses are in [FILTER_SPECIFICATIONS.md](FILTER_SPECIFICATIONS.md).
+
 **Test Run Date:** February 5, 2026  
 **Test Harness:** `tests/test_dsp_reference.cpp` (17 total tests)  
 **Build Configuration:** `-DBUILD_RX=ON -DBUILD_TESTS=ON`  
@@ -393,7 +400,7 @@ cd build && cmake .. -DBUILD_RX=ON -DBUILD_TESTS=ON && make test_dsp_reference &
 
 **Output Location:** `/Users/ssamjung/Desktop/WIP/mmsstv-portable/TEST_RESULTS.txt`
 
-**Full Output:** See [TEST_RESULTS.txt](../TEST_RESULTS.txt)
+**Full Output:** See [utils/TEST_RESULTS.txt](../utils/TEST_RESULTS.txt)
 
 ---
 

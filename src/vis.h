@@ -18,9 +18,10 @@ static const int kVisMaxTones = 21;
  *   1900 Hz 300 ms, 1200 Hz 10 ms, 1900 Hz 300 ms, 1200 Hz 30 ms (start bit),
  *   `nbits` data bits LSB-first, 30 ms each (1100 Hz = 1, 1300 Hz = 0),
  *   1200 Hz 30 ms (stop bit).
- * The parity bit is part of the code (bit 7 of each byte); it is not sent
- * separately. nbits is 8 (standard VIS, 910 ms) or 16 (MMSSTV MR/MP/ML
- * extended VIS: 0x23 low byte first, then the mode byte, 1150 ms).
+ * The parity bit is part of the code (bit 7 of each byte: even parity for
+ * standard codes, odd for the MR/MP/ML bytes); it is not sent separately.
+ * nbits is 8 (standard VIS, 910 ms) or 16 (MMSSTV MR/MP/ML extended VIS:
+ * 0x23 low byte first, then the mode byte, 1150 ms).
  * Returns the number of tones written to `out` (at most kVisMaxTones).
  */
 int vis_build_tones(unsigned short code, int nbits, VisTone *out);

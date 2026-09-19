@@ -1,5 +1,13 @@
 # BPF and AGC Filter Re-Enablement Summary
 
+> **Historical record, not maintained.** This is a change summary from February 19, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - HBPF starts at 1100 Hz, not 1080 Hz. With att = 20 the Kaiser design reduces to a rectangular window; the measured worst stop band is about 25–28 dB, not 60 dB. See [FILTER_SPECIFICATIONS.md](FILTER_SPECIFICATIONS.md).
+> - There is no LPF ahead of the band-pass, and the ×32 stage after the AGC is a hard limiter, not a gain. The current decoder front end is: clip at ±24576, 2-tap average, FIR band-pass (HBPFS 400–2500 Hz before VIS, HBPF 1100–2600 Hz after), CLVL AGC, ×32 hard limiter, then CIIRTANK detectors at 1080/1200/1320/1900/2100 Hz and a Hilbert-transform FM demodulator for the picture. See [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md).
+> - Line numbers are out of date; see [BPF_AGC_IMPLEMENTATION_GUIDE.md](BPF_AGC_IMPLEMENTATION_GUIDE.md) for the current code.
+
 **Date:** February 19, 2026  
 **Status:** ✅ COMPLETED  
 **Impact:** Production-ready decoder with full signal processing pipeline

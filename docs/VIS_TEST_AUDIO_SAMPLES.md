@@ -1,5 +1,12 @@
 # VIS Decoder Testing with Audio Samples
 
+> **Historical record, not maintained.** This is a VIS test note from February 19, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - MMSSTV transmits VIS bits as 1100 Hz = 1 and 1300 Hz = 0. 1080 and 1320 Hz are only the receiver's detector centres (80 Hz bandwidth). See [FREQUENCY_ANALYSIS.md](FREQUENCY_ANALYSIS.md).
+> - Bit 7 is set so that the whole byte has an even number of ones for the standard codes (odd for the MR/MP/ML bytes and MMSSTV's B/W 12 code 0x86).
+
 ## Test Results Summary
 
 **Date**: February 19, 2026  

@@ -1,5 +1,11 @@
 # RX Features Porting Plan (Decoder/Demod)
 
+> **Historical record, not maintained.** This is the decoder porting plan from February 5, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - This plan has been carried out. The decoder API is in `include/sstv_decoder.h`; see [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md) for how it works and [DECODER_STATUS.md](DECODER_STATUS.md) for what is and isn't ported.
+
 **Date:** Feb 5, 2026  
 **Project:** mmsstv-portable (encoder-only → add RX)  
 **Goal:** Add a minimal, portable SSTV receiver pipeline with optional DSP features.

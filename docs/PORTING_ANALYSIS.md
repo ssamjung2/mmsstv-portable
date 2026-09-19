@@ -1,5 +1,13 @@
 # MMSSTV to Portable Library - Architecture Analysis & Porting Plan
 
+> **Historical record, not maintained.** This is the porting analysis from January 28, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - For where each part of the library comes from in MMSSTV, with line numbers, see [MMSSTV_ARCHITECTURE_ANALYSIS.md](MMSSTV_ARCHITECTURE_ANALYSIS.md).
+> - Done since: the encoder (all 43 modes), a decoder with VIS and narrow-mode (N-VIS) detection, the CLVL AGC, per-line sync re-lock and timing (slant) correction. Not ported: AFC, CW/FSK ID, the PLL and zero-crossing demodulators.
+> - The command-line tools are in `utils/`; there is no `examples/` directory.
+
 **Analysis Date:** January 28, 2026  
 **Source Code:** MMSSTV LGPL (Copyright 2000-2013 Makoto Mori, Nobuyuki Oba)  
 **Target:** Cross-platform C/C++ library for *nix/macOS/Raspberry Pi

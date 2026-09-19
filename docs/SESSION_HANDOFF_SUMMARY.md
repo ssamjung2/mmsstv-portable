@@ -1,5 +1,15 @@
 # MMSSTV Encoder Library Port - Session Summary & Handoff
 
+> **Historical record, not maintained.** This is a session hand-off note from January 28, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The VIS bit tones in this note are inverted: MMSSTV sends 1100 Hz for a 1 and 1300 Hz for a 0.
+> - VIS is 910 ms, not 640 ms: the 8 data bits (LSB first, 1100 Hz = 1, 1300 Hz = 0) include the parity bit as bit 7, so there is no separate parity tone. MMSSTV's 16-bit VIS for the MR/MP/ML modes takes 1150 ms. See [ENCODER.md](ENCODER.md).
+> - Parity: the 23 standard codes use even parity; the 13 MR/MP/ML mode bytes, the 0x23 prefix and MMSSTV's B/W 12 code (0x86) use odd parity.
+> - The encoder is complete. The library now also has a decoder; see [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md) and [DECODER_STATUS.md](DECODER_STATUS.md).
+> - The command-line tools are in `utils/`; there is no `examples/` directory.
+
 **Date**: January 28, 2026  
 **Project**: mmsstv-portable (SSTV Encoder-Only Library)  
 **Status**: Phase 5/6 - Ready for Main Encoder Implementation  

@@ -1,5 +1,12 @@
 # Next Steps - Phase 6: External Validation
 
+> **Historical record, not maintained.** This is a next-steps plan from January 30, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - Instead of relying only on external decoders, the project went on to build its own decoder. The current test suite (9 registered CTest tests, all passing on 2026-09-18) is described in [tests/README.md](../tests/README.md).
+> - Open work is tracked in [PRODUCTION_READY_PLAN.md](PRODUCTION_READY_PLAN.md).
+
 **Current Status**: ✅ Phase 5 Complete  
 **Date**: January 30, 2026  
 **Ready to Begin**: Phase 6 - Decoder Validation

@@ -30,12 +30,12 @@ If you are not familiar with DSP, here are the minimum concepts used in the test
 
 ```bash
 cd /path/to/mmsstv-portable
-mkdir -p build
-cd build
-cmake .. -DBUILD_RX=ON -DBUILD_TESTS=ON
-make test_dsp_reference
-./bin/test_dsp_reference
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --target test_dsp_reference
+./bin/test_dsp_reference          # executables are written to <repo>/bin
 ```
+
+Current status (2026-09-18): all 17 tests pass (93 checks, 0 failures).
 
 ## 4) DSP Components (Implementation‑Aligned)
 
@@ -95,19 +95,18 @@ $$\alpha =
 
 ## 5) How DSP Fits Into mmsstv‑portable
 
-**Current state**: the DSP filters here are **core building blocks** and are validated via the test harness.  
-**Original MMSSTV integration**: these filters feed SSTV RX chains (tone detection, filtering, demodulation). The original call sites are in:
-- [mmsstv/sstv.cpp](../../mmsstv/sstv.cpp)
-- [mmsstv/Option.cpp](../../mmsstv/Option.cpp)
-- [mmsstv/Sound.cpp](../../mmsstv/Sound.cpp)
+The decoder (`src/decoder.cpp`) uses these primitives as MMSSTV's receiver
+does (details in [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md),
+measured responses in [FILTER_SPECIFICATIONS.md](FILTER_SPECIFICATIONS.md)):
 
-**Typical architecture flow (conceptual)**:
-1. **Input audio** → **CIIR** (anti‑aliasing / band shaping)
-2. **Tone selection** → **CIIRTANK** (narrowband resonators)
-3. **FIR smoothing** → **DoFIR / CFIR2**
-4. **Decoder logic** uses the filtered outputs for synchronization and demodulation
+| Primitive | Use in the decoder |
+| --- | --- |
+| `MakeFilter` + `CFIR2::Do(d, taps)` | Band-pass HBPFS (400–2500 Hz) / HBPF (1100–2600 Hz), sharing one delay line |
+| `CIIRTANK` | Tone detectors at 1080, 1200, 1320, 1900 and 2100 Hz (80 or 100 Hz bandwidth) |
+| `CIIR` (`MakeIIR`, Butterworth) | 50 Hz envelope smoothing after each detector; 1800 Hz 3rd-order LPF after the FM demodulator |
+| `MakeHilbert` + `DoFIR` | Quadrature branch of the Hilbert FM demodulator |
 
-This consolidated doc focuses on the correctness of those building blocks.
+The encoder does not use these filters (it only uses the VCO in `src/vco.cpp`).
 
 ## 6) Test Harness (What Is Verified)
 
@@ -213,7 +212,7 @@ This consolidated doc focuses on the correctness of those building blocks.
 
 ## 7) How to Read Test Output
 
-```
+```text
 PASS/FAIL <metric>: actual=<value> expected=<value> diff=<value> rel_error=<value>
 ```
 
@@ -242,7 +241,7 @@ PASS/FAIL <metric>: actual=<value> expected=<value> diff=<value> rel_error=<valu
 ## 9) MMSSTV Mapping (Verification)
 
 | Portable Component | Original MMSSTV File | Original Symbol |
-|---|---|---|
+| --- | --- | --- |
 | `DoFIR(...)` | [mmsstv/fir.cpp](../../mmsstv/fir.cpp) | `DoFIR` |
 | `MakeFilter(...)` | [mmsstv/fir.cpp](../../mmsstv/fir.cpp) | `MakeFilter` |
 | `MakeHilbert(...)` | [mmsstv/fir.cpp](../../mmsstv/fir.cpp) | `MakeHilbert` |
@@ -257,10 +256,10 @@ PASS/FAIL <metric>: actual=<value> expected=<value> diff=<value> rel_error=<valu
 - Oppenheim & Schafer, *Discrete‑Time Signal Processing* (Ch. 6–8)
 - Proakis & Manolakis, *Digital Signal Processing* (IIR/FIR design)
 - Lyons, *Understanding Digital Signal Processing* (resonators and intuition)
-- Smith (CCRMA): https://ccrma.stanford.edu/~jos/filters/
-- Butterworth filter: https://en.wikipedia.org/wiki/Butterworth_filter
-- Bilinear transform: https://en.wikipedia.org/wiki/Bilinear_transform
-- Kaiser window: https://en.wikipedia.org/wiki/Kaiser_window
+- Smith (CCRMA): <https://ccrma.stanford.edu/~jos/filters/>
+- Butterworth filter: <https://en.wikipedia.org/wiki/Butterworth_filter>
+- Bilinear transform: <https://en.wikipedia.org/wiki/Bilinear_transform>
+- Kaiser window: <https://en.wikipedia.org/wiki/Kaiser_window>
 
 ## 11) Additional Enhancements to Consider
 

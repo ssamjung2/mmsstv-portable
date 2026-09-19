@@ -1,5 +1,12 @@
 # Master Plan Review & Refocus
 
+> **Historical record, not maintained.** This is a plan review from February 21, 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The figures here are out of date: the DSP reference tests pass 17/17, the image buffer and colour decoding are implemented for all mode families, and all 43 modes decode. The current test suite (9 registered CTest tests, all passing on 2026-09-18) is described in [tests/README.md](../tests/README.md).
+> - The decoder has no DNR or AFC stage (`src/SpectralSubtractionDNR.cpp` exists but the decoder does not use it), and the proposed CLI flags are not implemented; see [PRODUCTION_READY_PLAN.md](PRODUCTION_READY_PLAN.md).
+
 ## mmsstv-portable: Porting Analysis, CLI RX Expansion, and UI Settings Mapping
 
 **Date:** February 21, 2026  
@@ -522,7 +529,7 @@ This will:
 **Core Implementation:**
 - [src/decoder.cpp](../src/decoder.cpp) — Decoder logic (need: VIS mapping, pixel filling)
 - [include/sstv_decoder.h](../include/sstv_decoder.h) — Public API
-- [src/sstv.cpp](../src/sstv.cpp) — Mode definitions
+- `../mmsstv/sstv.cpp` (MMSSTV source, outside this repository) — Mode definitions
 - [src/dsp_filters.cpp](../src/dsp_filters.cpp) — Tone detectors
 
 **Tests:**

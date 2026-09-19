@@ -1,5 +1,12 @@
 # Test Modes WAV Files Analysis Report
 
+> **Historical record, not maintained.** This is an analysis of `tests/test_modes/` from early 2026. It describes the project at that time and the code has changed since. For current documentation see [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md).
+>
+> Corrections (2026-09-18, checked against the code, MMSSTV and the SSTV Handbook):
+>
+> - The current decoder decodes all 43 files in `tests/test_modes/` (the `decode_modes` test passes 43/43), so the level-based diagnosis below no longer applies. The decoder now has MMSSTV's CLVL AGC ahead of the tone detectors.
+> - The alt_color_bars figures refer to [VIS_DECODER_VALIDATION_REPORT.md](VIS_DECODER_VALIDATION_REPORT.md), whose source files are not in the repository.
+
 ## Overview
 
 The `/tests/test_modes/` directory contains 43 WAV files covering all SSTV modes, each with proper VIS codes embedded (per REPORT.txt). However, **all 43 files fail VIS decoding** due to insufficient audio signal level.

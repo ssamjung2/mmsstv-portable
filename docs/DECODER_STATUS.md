@@ -1,147 +1,63 @@
-# Decoder Implementation Status Summary
+# Decoder status
 
-**Date:** February 19, 2026  
-**Component:** RX Decoder Audio Processing Pipeline
+As of 2026-09-18. How the decoder works is described in
+[DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md).
 
----
+## What works
 
-## Quick Answer: What's Currently Enabled/Disabled?
+| Area | Status |
+| --- | --- |
+| Front end | 2-tap average, MMSSTV band-pass (HBPFS/HBPF), level AGC and limiter, five tone detectors; all enabled. |
+| Mode detection | Standard VIS, MMSSTV 16-bit VIS (MR/MP/ML) and the narrow-mode FSK N-VIS; or a caller-supplied mode hint. |
+| Image decoding | All 43 modes, RGB24 output. Robot 36 is decoded in colour (4:2:0 with the separator-tone chroma selector). |
+| Line sync | Re-locks to the line sync every line (1200 Hz; 1900 Hz for the narrow modes), whole-line search. |
+| Clock mismatch | Timing-correction integral term; images stay straight at ±300 ppm and at +1000 ppm (tested on Martin, Scottie, PD, MR, P modes). |
+| End of input | `sstv_decoder_finish()` flushes a partial last line. |
+| Reuse | `sstv_decoder_reset()` returns the decoder to header detection for the next transmission. |
 
-| Component | Status | Location | Reason |
-|-----------|--------|----------|--------|
-| **Simple LPF** | ✅ ENABLED | decoder.cpp:607-609 | Basic smoothing |
-| **BPF (Bandpass)** | ❌ DISABLED | decoder.cpp:611-621 `#if 0` | Baseline testing |
-| **AGC (Auto Gain)** | ❌ DISABLED | decoder.cpp:623-629 `#if 0` | Baseline testing |
-| **Scaling (×32)** | ✅ ENABLED | decoder.cpp:631-633 | Required for IIR |
-| **IIR Tone Detectors** | ✅ ENABLED | decoder.cpp:634-651 | Core functionality |
-| **50 Hz LPF (post-IIR)** | ✅ ENABLED | decoder.cpp:635, 639, 645, 649 | Envelope smoothing |
+## Verification
 
-## Current Audio Processing Pipeline
+From the test suite ([tests/README.md](../tests/README.md)), 2026-09-18:
 
-```
-Input Sample (±32768)
-         ↓
-   [Clip to ±24576]
-         ↓
-   [Simple LPF: (s + prev_s) * 0.5]  ✅ ENABLED
-         ↓
-   [BPF: 400-2500 Hz or 1080-2600 Hz]  ❌ DISABLED (#if 0)
-         ↓
-   [AGC: Normalize to 16384]  ❌ DISABLED (#if 0)
-         ↓
-   [Scale: d * 32, clamp ±16384]  ✅ ENABLED
-         ↓
-         ├─→ [IIR11 @ 1080 Hz, Q=80] → |abs| → [LPF 50Hz] → d11  ✅
-         ├─→ [IIR12 @ 1200 Hz, Q=100] → |abs| → [LPF 50Hz] → d12  ✅
-         ├─→ [IIR13 @ 1320 Hz, Q=80] → |abs| → [LPF 50Hz] → d13  ✅
-         └─→ [IIR19 @ 1900 Hz, Q=100] → |abs| → [LPF 50Hz] → d19  ✅
-                                                                    ↓
-                                            [Decision Logic: VIS/Sync/Image]
-```
+- `roundtrip`: every mode encoded by this library, decoded from the header
+  alone. MAE against the source image is 1.5–16 at 48 kHz and 2–15 at
+  11025 Hz. Also covers +500 ppm clock mismatch and decoder reuse after reset.
+- `decode_images`: 12/12 recorded WAVs within MAE 60 of their reference
+  images (actual MAE 11–29).
+- `timing_correction`: the three cases with recordings present pass.
+- `decode_modes`: 43/43 (mode, size and image produced; quality not checked).
 
-## Why BPF and AGC Are Disabled
+## Known limitations
 
-**Purpose:** Establish baseline decoder behavior with minimal signal processing
-
-**Benefits:**
-1. **Simpler debugging** - Fewer variables when troubleshooting VIS decode
-2. **Isolate IIR filters** - Verify tone detection works without interference
-3. **Direct signal path** - Easier to trace signal levels through pipeline
-4. **Component testing** - Validate each stage independently
-
-**Trade-offs:**
-- ❌ No protection from out-of-band noise
-- ❌ No automatic level adjustment for varying signals
-- ❌ Less robust to real-world radio conditions
-
-## Production Configuration (Recommended)
-
-For production deployment, **ENABLE both BPF and AGC**:
-
-```cpp
-// In src/decoder.cpp, change:
-
-// Line 611: BPF
-#if 1  // Change from #if 0
-if (dec->use_bpf) {
-    if (dec->sync_mode >= 3 && !dec->hbpf.empty()) {
-        d = dec->bpf.Do(d, dec->hbpf.data());
-    } else if (!dec->hbpfs.empty()) {
-        d = dec->bpf.Do(d, dec->hbpfs.data());
-    }
-}
-#endif
-
-// Line 623: AGC
-#if 1  // Change from #if 0
-level_agc_do(&dec->lvl, d);
-level_agc_fix(&dec->lvl);
-double ad = level_agc_apply(&dec->lvl, d);
-#else
-double ad = d;
-#endif
-```
-
-## Comparison: MMSSTV Original vs Our Port
-
-| Feature | MMSSTV Original | Our Port (Current) | Our Port (Production) |
-|---------|-----------------|--------------------|-----------------------|
-| Simple LPF | ✅ Always on | ✅ Always on | ✅ Always on |
-| BPF | ✅ Enabled (m_bpf flag) | ❌ Disabled | ✅ Should enable |
-| AGC | ✅ Always on | ❌ Disabled | ✅ Should enable |
-| IIR Resonators | ✅ 4 filters | ✅ 4 filters | ✅ 4 filters |
-| 50 Hz LPF | ✅ After IIR | ✅ After IIR | ✅ After IIR |
-| VIS Frequencies | 1080/1320 Hz | 1080/1320 Hz ✅ | 1080/1320 Hz ✅ |
-
-## Architecture Documentation
-
-**Complete technical details:** See [`DECODER_ARCHITECTURE_BASELINE.md`](DECODER_ARCHITECTURE_BASELINE.md)
-
-Contents include:
-- Full pipeline flowchart
-- Filter coefficient calculations
-- Timing & sampling strategy
-- Decision logic & thresholds
-- MMSSTV source code references
-- Production recommendations
-
-## Test Status
-
-**Component-Level Tests:** ✅ All passing
-- IIR filters produce correct coefficients
-- Tone discrimination verified (10:1 ratio)
-- LPF settling behavior confirmed
-
-**Integration Tests:** ⚠️ Partial
-- Encoder generates correct 1080/1320 Hz tones ✅
-- Decoder IIR filters tuned to 1080/1320 Hz ✅
-- **VIS decoding still failing** ❌ (investigating)
-
-## Next Steps
-
-1. **Debug VIS Decode:** Investigate why decoder reads 0x00 instead of 0x88
-   - Add debug output for d11/d13/d19 values during VIS bits ✅ (already done)
-   - Verify VCO actually outputs 1080/1320 Hz via FFT analysis
-   - Check signal levels through entire pipeline
-
-2. **Enable AGC:** Test with automatic gain control
-   - Verify normalization to 16384 target
-   - Test with weak and strong signals
-   - Validate discrimination threshold remains effective
-
-3. **Enable BPF:** Test with bandpass filtering
-   - Verify 1080 Hz is within HBPF passband
-   - Test rejection of out-of-band noise
-   - Measure impact on VIS detection
-
-4. **Production Testing:** Full pipeline validation
-   - Real-world signal tests
-   - Noise immunity testing
-   - Cross-compatibility with other SSTV software
-
----
-
-**For detailed engineering specifications, see:**
-- [`DECODER_ARCHITECTURE_BASELINE.md`](DECODER_ARCHITECTURE_BASELINE.md) - Complete architecture
-- [`DSP_CONSOLIDATED_GUIDE.md`](DSP_CONSOLIDATED_GUIDE.md) - DSP component details
-- [`PORTING_ANALYSIS.md`](PORTING_ANALYSIS.md) - Original MMSSTV analysis
+1. **VIS acceptance is looser than MMSSTV.** A bit is rejected only when both
+   tones are below the 1900 Hz level *and* `|d11 − d13| < 80` (MMSSTV: either
+   condition, threshold 1200). Parity failures are accepted, and a code's
+   bitwise inverse is tried if the code is unknown. This favours weak signals
+   but allows more false detections in noise. The sense level is fixed at 0
+   (no API).
+2. **AVT 90**: the digital header is not decoded; the image start is computed
+   from the first VIS. If that VIS is missed and a later one is decoded, the
+   image is misplaced. AVT has no line sync, so there is no sync tracking or
+   clock-mismatch correction for AVT.
+3. **Horizontal offset**: a steady offset of a few pixels (about ±5 px on a
+   320-pixel line) remains in some modes. It comes from MMSSTV's per-mode
+   sync-peak positions (`m_OFP`), which were calibrated for MMSSTV's own
+   receiver. When the initial alignment is off, the first ~10–15 lines can be
+   skewed while the re-lock converges (limited to 7.5 % of the sync length per line).
+4. **No AFC**: a mistuned signal (tone offset) is not tracked.
+   `sstv_decoder_set_vis_tones()` only moves the two VIS detectors.
+5. **Mode hint**: decoding starts at the first sample fed; the decoder does
+   not search for the image start. Start the audio at the image, or let the
+   header be detected instead.
+6. **One image per run**: once an image has started, headers are ignored
+   until `sstv_decoder_reset()`.
+7. **Only MMSSTV's "wide" band-pass and the Hilbert demodulator** are
+   implemented (no narrow BPF option, no PLL or zero-crossing demodulator).
+8. **Callsign FSK ID** (MMSSTV 0x2A header) is not decoded.
+9. **Input** is clipped at ±24576 (MMSSTV only flags overflow).
+10. **AGC modes**: `SSTV_AGC_LOW/MED/HIGH/SEMI` behave like `SSTV_AGC_AUTO`;
+    only `SSTV_AGC_OFF` differs.
+11. **Code hygiene**: the sync-tracker helpers `sync_tracker_trig/max/start`
+    and `decoder_try_vis_from_buffer()` are unused, and some debug-logging
+    counters are `static` (shared by all decoder instances; affects log
+    output only).

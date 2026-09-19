@@ -33,19 +33,16 @@
 - But this is for a single tone; for wideband noise, scale for bandwidth and AGC.
 
 ## Practical PCM RMS for Simulated Noise
-- In practice, to make noise audible and match real S-meter readings, use:
-  - S9: PCM RMS ≈ 7-10 (for 1 kHz tone, not noise)
-  - For wideband noise, PCM RMS ≈ 2000-8000 (empirical, matches real HF audio)
-- **Current code uses much higher RMS for realism** (matches what is heard on air, not strict S-meter math)
+- The S-meter arithmetic above gives single-digit PCM RMS values, which are far too quiet to be useful in simulation.
+- `tests/test_hf_impairments.cpp` therefore uses empirical noise levels: it sweeps white-noise RMS **2000, 6000, 10000, 15000, 20000** (16-bit PCM units) against the input scaled by 0.5. These are chosen for realistic-sounding noise, not calibrated to S-units; the S7/S9 labels the program prints are nominal. See [HF_IMPAIRMENTS_TEST_GUIDE.md](HF_IMPAIRMENTS_TEST_GUIDE.md).
 
 ## Recommendation
-- For realism, keep using empirically calibrated PCM RMS (e.g., 16000 for S9+6dB) but document the mapping and rationale.
-- Optionally, add a mode to set noise floor by S-unit or dBm for advanced users.
+- If calibrated levels are needed, add a mode that sets the noise floor from an S-unit or dBm value using the conversion above, and document the audio chain gain it assumes.
 
 ---
 
 **References:**
 - ARRL Handbook, "S-Meter Calibration"
 - ITU-R P.372-16, "Radio Noise" (2022)
-- https://www.arrl.org/s-meter
-- https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.372-16-202202-I!!PDF-E.pdf
+- <https://www.arrl.org/s-meter>
+- <https://www.itu.int/dms_pubrec/itu-r/rec/p/R-REC-P.372-16-202202-I!!PDF-E.pdf>

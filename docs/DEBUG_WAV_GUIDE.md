@@ -72,7 +72,7 @@ sstv_decoder_enable_debug_wav(dec, NULL, NULL, "agc_only.wav", NULL);
 
 The decoder processes audio through these stages:
 
-```
+```text
 ┌─────────────┐
 │ Input PCM   │ ← 16-bit signed integers (-32768 to +32767)
 └──────┬──────┘
@@ -90,15 +90,15 @@ The decoder processes audio through these stages:
        │ 💾 DEBUG: before.wav (written here)
        ▼
 ┌─────────────────────────────┐
-│ Stage 2: Bandpass Filter    │ ← Kaiser FIR, ~104 taps
-│ • HBPFS: 400-2500 Hz (wide) │    Before sync lock
-│ • HBPF: 1080-2600 Hz (narrow)│   After sync lock
+│ Stage 2: Bandpass Filter    │ ← windowed-sinc FIR, 24·fs/11025 taps
+│ • HBPFS: 400-2500 Hz (wide) │    Before an image starts
+│ • HBPF: 1100-2600 Hz        │    While an image is decoded
 └──────┬──────────────────────┘
        │
        │ 💾 DEBUG: bpf.wav (written here)
        ▼
 ┌─────────────────────────────┐
-│ Stage 3: AGC                │ ← Peak tracking (100ms window)
+│ Stage 3: AGC                │ ← Peak tracking (100ms window), bypassed by SSTV_AGC_OFF
 │ • Target: ±16384            │    Normalize to full-scale
 │ • Window: 100ms             │    Fast attack mode
 └──────┬──────────────────────┘
@@ -115,11 +115,13 @@ The decoder processes audio through these stages:
        ▼
 ┌─────────────────────────────┐
 │ Stage 5: Tone Detectors     │ ← IIR resonators + envelope detection
-│ • 1080 Hz (mark)            │    VIS decode & image data
-│ • 1200 Hz (sync)            │    (receives ×32 scaled ±16384 signal)
-│ • 1320 Hz (space)           │
-│ • 1900 Hz (leader)          │
-└─────────────────────────────┘
+│ • 1080 / 1320 Hz            │    VIS bits
+│ • 1200 Hz                   │    VIS start, line sync
+│ • 1900 / 2100 Hz            │    leader, narrow sync, N-VIS FSK
+└─────────────────────────────┘    (receive the ×32-limited signal)
+
+Pixel data does not come from the tone detectors: the Hilbert FM
+demodulator runs on the AGC output (agc.wav).
 ```
 
 **Important Note on final.wav:**
@@ -159,24 +161,24 @@ This means:
 
 **Characteristics:**
 - Band-limited to SSTV frequencies
-- 60 Hz hum removed
-- High-frequency noise attenuated
+- 50/60 Hz hum reduced by only ~16 dB (HBPFS is a short, unwindowed FIR)
+- High-frequency noise attenuated by ~25-40 dB
 - Cleaner tone separation
 
 **What to look for:**
 - Removal of low-frequency hum (< 400 Hz)
 - Removal of high-frequency noise (> 2600 Hz)
 - Cleaner SSTV tone visibility
-- ~60 dB attenuation in stopbands
+- About -25 to -28 dB worst-case stop band (measured, see FILTER_SPECIFICATIONS.md)
 
 **Spectrogram view:**
-- Energy concentrated in 400-2600 Hz (wide filter)
-- Or 1080-2600 Hz (narrow filter after sync)
-- Sharp cutoff outside passband
+- Energy concentrated in 400-2500 Hz (HBPFS, before the image)
+- Or 1100-2600 Hz (HBPF, during the image)
+- Gradual roll-off outside the pass band
 
 **Human listening:**
 - Sounds "cleaner" and more focused
-- Hum and rumble removed
+- Hum and rumble reduced
 - High-pitched noise reduced
 
 ### 3. agc.wav (After AGC Normalization)
@@ -191,7 +193,7 @@ This means:
 - Consistent amplitude across file
 - Weak signals boosted to usable levels
 - No clipping or distortion
-- Smooth gain transitions (no clicks)
+- Gain changes in steps every 100 ms (small level steps are normal)
 
 **Spectrogram view:**
 - Similar frequency content to BPF
@@ -331,10 +333,10 @@ Using the test file `alt5_test_panel_scottie1.wav`:
    - Input level varies throughout
 
 2. **bpf.wav**
-   - Frequencies < 400 Hz removed (wider filter initially)
+   - Frequencies < 400 Hz attenuated (wide filter before the image)
    - Frequencies > 2600 Hz attenuated
    - Cleaner tone separation
-   - Filter switches from HBPFS (wide) to HBPF (narrow) after sync
+   - Filter switches from HBPFS (400-2500 Hz) to HBPF (1100-2600 Hz) when the image starts
 
 3. **agc.wav**
    - Consistent amplitude throughout file
@@ -542,4 +544,4 @@ Use this tool during development, testing, and troubleshooting to ensure optimal
 **See Also:**
 - [BPF_AGC_IMPLEMENTATION_GUIDE.md](BPF_AGC_IMPLEMENTATION_GUIDE.md) - Filter technical details
 - [DECODER_ARCHITECTURE_BASELINE.md](DECODER_ARCHITECTURE_BASELINE.md) - Pipeline architecture
-- [examples/decode_wav_debug.c](../examples/decode_wav_debug.c) - Example usage
+- [utils/decode_wav_debug.c](../utils/decode_wav_debug.c) - Example usage
