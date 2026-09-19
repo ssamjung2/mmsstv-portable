@@ -89,6 +89,13 @@ typedef enum {
     IMAGE_COMPLETE = 8       /* Image fully decoded */
 } image_decode_state_t;
 
+/* How the current image was started (sets the delay to line 0) */
+enum {
+    IMAGE_START_HINT = 0,    /* mode hint, no header: audio starts at the image */
+    IMAGE_START_VIS  = 1,    /* VIS decoded */
+    IMAGE_START_NVIS = 2     /* narrow-mode N-VIS decoded */
+};
+
 /* === VIS DECODER === */
 typedef struct {
     int bit_count;           /* 0-7 for 7-bit VIS, 0-15 for 16-bit */
@@ -141,7 +148,7 @@ typedef enum {
     SCAN_YC    = 2,  /* ch0=Y, ch1=R-Y, ch2=B-Y → YCtoRGB; ch1/ch2 mapped via KS2S */
     SCAN_YC_PD = 3,  /* ch0=Y_odd, ch1=R-Y, ch2=B-Y, ch3=Y_even → 2 image rows (PD*, MP*, MN*) */
     SCAN_BW    = 4,  /* ch0=Y only → grayscale, row_double rows (RM8, RM12) */
-    SCAN_R36   = 5,  /* Robot 36: simplified as grayscale from ch0=Y */
+    SCAN_R36   = 5,  /* Robot 36: ch0=Y, ch2=R-Y or B-Y (4:2:0, chosen by separator tone) */
 } scan_color_type_t;
 
 /*
@@ -177,16 +184,16 @@ static const scan_timing_ms_t SCAN_TIMING[SSTV_MODE_COUNT] = {
 /* R36   */ { 150.000,  12.000, 10.700,  88.000,  89.250,  91.500,  94.000, 138.000, 44.00, 240, 0, SCAN_R36   },
 /* R72   */ { 300.000,  12.000, 10.700, 138.000, 144.000, 213.000, 219.000, 288.000, 69.00, 240, 0, SCAN_YC    },
 /* AVT90 */ { 375.000,   0.000,  0.000, 125.000, 125.000, 250.000, 250.000, 375.000,  0.00, 240, 0, SCAN_RGB   },
-/* SCT1  */ { 428.220,  10.500,  0.000, 138.240, 139.740, 277.980, 279.480, 417.720,  0.00, 240, 0, SCAN_RGB   },
-/* SCT2  */ { 277.692,  10.500,  0.000,  88.064,  89.564, 177.628, 179.128, 267.192,  0.00, 240, 0, SCAN_RGB   },
-/* SCTDX */ {1050.300,  10.500,  0.000, 345.600, 347.100, 692.700, 694.200,1039.800,  0.00,1280, 0, SCAN_RGB   },
+/* SCT1  */ { 428.220,  10.500, 10.700, 138.240, 139.740, 277.980, 279.480, 417.720,  0.00, 240, 0, SCAN_RGB   },
+/* SCT2  */ { 277.692,  10.500, 10.800,  88.064,  89.564, 177.628, 179.128, 267.192,  0.00, 240, 0, SCAN_RGB   },
+/* SCTDX */ {1050.300,  10.500, 10.200, 345.600, 347.100, 692.700, 694.200,1039.800,  0.00,1280, 0, SCAN_RGB   },
 /* MRT1  */ { 446.446,   5.434,  7.200, 146.432, 147.004, 293.436, 294.008, 440.440,  0.00, 240, 0, SCAN_MRT   },
 /* MRT2  */ { 226.798,   5.434,  7.400,  73.216,  73.788, 147.004, 147.576, 220.792,  0.00, 240, 0, SCAN_MRT   },
 /* SC2_180*/{711.044,   6.044,  7.800, 235.000, 235.000, 470.000, 470.000, 705.000,  0.00,   0, 0, SCAN_RGB   },
-/* SC2_120*/{475.523,   6.022,  7.500, 156.500, 156.500, 313.000, 313.000, 469.500,  0.00,   0, 0, SCAN_RGB   },
-/* SC2_60 */{240.385,   6.001,  7.900,  78.128,  78.128, 156.256, 156.256, 234.384,  0.00,   0, 0, SCAN_RGB   },
-/* PD50  */ { 388.160,  22.080, 19.300,  91.520,  91.520, 183.040, 183.040, 274.560,  0.00, 480, 0, SCAN_YC_PD },
-/* PD90  */ { 703.040,  22.080, 18.900, 170.240, 170.240, 340.480, 340.480, 510.720,  0.00, 480, 0, SCAN_YC_PD },
+/* SC2_120*/{475.523,   6.022,  7.500, 156.500, 156.500, 313.000, 313.000, 469.500,  0.00, 240, 0, SCAN_RGB   },
+/* SC2_60 */{240.385,   6.001,  7.900,  78.128,  78.128, 156.256, 156.256, 234.384,  0.00, 240, 0, SCAN_RGB   },
+/* PD50  */ { 388.160,  22.080, 19.300,  91.520,  91.520, 183.040, 183.040, 274.560,  0.00, 240, 0, SCAN_YC_PD },
+/* PD90  */ { 703.040,  22.080, 18.900, 170.240, 170.240, 340.480, 340.480, 510.720,  0.00, 240, 0, SCAN_YC_PD },
 /* PD120 */ { 508.480,  22.080, 19.400, 121.600, 121.600, 243.200, 243.200, 364.800,  0.00, 480, 0, SCAN_YC_PD },
 /* PD160 */ { 804.416,  22.080, 18.900, 195.584, 195.584, 391.168, 391.168, 586.752,  0.00, 480, 0, SCAN_YC_PD },
 /* PD180 */ { 754.240,  22.080, 18.900, 183.040, 183.040, 366.080, 366.080, 549.120,  0.00, 480, 0, SCAN_YC_PD },
@@ -200,7 +207,7 @@ static const scan_timing_ms_t SCAN_TIMING[SSTV_MODE_COUNT] = {
 /* MR115 */ { 450.300,  10.000, 10.600, 220.000, 220.100, 330.100, 330.200, 440.200,110.00,   0, 0, SCAN_YC    },
 /* MR140 */ { 548.300,  10.000, 10.600, 269.000, 269.100, 403.600, 403.700, 538.200,134.50,   0, 0, SCAN_YC    },
 /* MR175 */ { 684.300,  10.000, 10.600, 337.000, 337.100, 505.600, 505.700, 674.200,168.50,   0, 0, SCAN_YC    },
-/* MP73  */ { 570.000,  10.000, 10.500, 140.000, 140.000, 280.000, 280.000, 420.000,  0.00,   0, 0, SCAN_YC_PD },
+/* MP73  */ { 570.000,  10.000, 10.500, 140.000, 140.000, 280.000, 280.000, 420.000,  0.00,1280, 0, SCAN_YC_PD },
 /* MP115 */ { 902.000,  10.000, 10.500, 223.000, 223.000, 446.000, 446.000, 669.000,  0.00,   0, 0, SCAN_YC_PD },
 /* MP140 */ {1090.000,  10.000, 10.500, 270.000, 270.000, 540.000, 540.000, 810.000,  0.00,   0, 0, SCAN_YC_PD },
 /* MP175 */ {1370.000,  10.000, 10.500, 340.000, 340.000, 680.000, 680.000,1020.000,  0.00,   0, 0, SCAN_YC_PD },
@@ -211,7 +218,7 @@ static const scan_timing_ms_t SCAN_TIMING[SSTV_MODE_COUNT] = {
 /* R24   */ { 200.000,   8.000,  8.100,  92.000,  96.000, 142.000, 146.000, 192.000, 46.00, 240, 1, SCAN_YC    },
 /* BW8   */ {  66.897,   8.000,  8.200,  58.897,   0.000,   0.000,   0.000,   0.000,  0.00, 240, 1, SCAN_BW    },
 /* BW12  */ { 100.000,   8.000,  8.000,  92.000,   0.000,   0.000,   0.000,   0.000,  0.00, 240, 1, SCAN_BW    },
-/* MN73  */ { 570.000,  10.000, 10.500, 140.000, 140.000, 280.000, 280.000, 420.000,  0.00,   0, 0, SCAN_YC_PD },
+/* MN73  */ { 570.000,  10.000, 10.500, 140.000, 140.000, 280.000, 280.000, 420.000,  0.00,1280, 0, SCAN_YC_PD },
 /* MN110 */ { 858.000,  10.000, 10.500, 212.000, 212.000, 424.000, 424.000, 636.000,  0.00,   0, 0, SCAN_YC_PD },
 /* MN140 */ {1090.000,  10.000, 10.500, 270.000, 270.000, 540.000, 540.000, 810.000,  0.00,   0, 0, SCAN_YC_PD },
 /* MC110 */ { 428.500,   8.000,  8.950, 140.000, 140.000, 280.000, 280.000, 420.000,  0.00,   0, 0, SCAN_RGB   },
@@ -244,10 +251,7 @@ struct sstv_decoder_s {
     sstv_rx_status_t last_status;
     
     /* === AGC STATE === */
-    sstv_agc_mode_t agc_mode;        /* AGC mode for VIS */
-    double agc_gain;                 /* Current AGC gain multiplier */
-    double agc_peak_level;           /* Peak signal level for AGC tracking */
-    int agc_sample_count;            /* Samples analyzed for AGC */
+    sstv_agc_mode_t agc_mode;        /* SSTV_AGC_OFF bypasses the MMSSTV level AGC */
     
     /* === STATE MACHINES === */
     vis_decoder_t vis;
@@ -262,6 +266,18 @@ struct sstv_decoder_s {
     sstv_dsp::CIIR lpf12;           /* 50 Hz LPF */
     sstv_dsp::CIIR lpf13;           /* 50 Hz LPF */
     sstv_dsp::CIIR lpf19;           /* 50 Hz LPF */
+    sstv_dsp::CIIRTANK iirfsk;      /* 2100 Hz: narrow-mode FSK space tone */
+    sstv_dsp::CIIR lpffsk;          /* 50 Hz LPF */
+
+    /* Narrow-mode N-VIS FSK decoder (MMSSTV CSSTVDEM::DecodeFSK, N-VIS path) */
+    int    fsk_mode;
+    long   fsk_time;
+    double fsk_nextd;
+    long   fsk_nexti;
+    int    fsk_bcnt;
+    int    fsk_c;
+    int    fsk_s;
+    int    fsk_code;
     sstv_dsp::CFIR2 bpf;            /* Bandpass FIR (shared delay line) */
     std::vector<double> hbpf;       /* MMSSTV HBPF taps */
     std::vector<double> hbpfs;      /* MMSSTV HBPFS taps */
@@ -283,6 +299,7 @@ struct sstv_decoder_s {
     sstv_dsp::CIIR hill_lpf;          /* 1800 Hz post-demod LPF, order 3 */
     double hill_demod_last;           /* Most recent FM demod output (+-16384 range) */
     double d12_last;                  /* Most recent 1200 Hz tone energy (for sync re-lock) */
+    double d19_last;                  /* Most recent 1900 Hz tone energy (narrow-mode sync) */
 
     /* === IMAGE BUFFER === */
     image_buffer_t image_buf;
@@ -303,6 +320,7 @@ struct sstv_decoder_s {
     double scan_KS2S;       /* chroma effective width for pixel column mapping */
     scan_color_type_t scan_color_type;
     int    scan_row_double; /* 1 = scan line writes 2 image rows */
+    int    scan_sync_1900;  /* 1 = line sync is 1900 Hz (narrow modes), else 1200 Hz */
 
     /* === LINE DECODER STATE === */
     double line_pos;        /* sample position within current scan line (0-based) */
@@ -311,11 +329,28 @@ struct sstv_decoder_s {
     std::vector<double> ch1_buf;  /* per-column ch1: R-Y or G (chroma/luma formula) */
     std::vector<double> ch2_buf;  /* per-column ch2: B-Y or B (chroma/luma formula) */
     std::vector<double> ch3_buf;  /* per-column ch3: Y_even for SCAN_YC_PD */
+    /* Robot 36 (4:2:0): each line carries Y plus one chroma component, chosen by
+     * the separator tone before it (1500 Hz = R-Y, 2300 Hz = B-Y). The latest
+     * R-Y and B-Y rows are kept across lines (MMSSTV m_D36[0..1], m_DSEL). */
+    std::vector<double> r36_ry;
+    std::vector<double> r36_by;
+    double r36_sep_sum;           /* sum of separator-tone levels in this line */
+    int    r36_sep_n;
+    int    r36_dsel;              /* 0 = last chroma was R-Y, 1 = B-Y */
 
     /* === PER-LINE SYNC RE-LOCK STATE === */
     double sync_ofp;            /* Expected sync peak position in samples (≈ scan_OF/2) */
     double sync_peak_val;       /* Max d12 seen in the current scan line's sync region */
     int    sync_peak_pos;       /* Sample position of that d12 peak */
+
+    /* === TIMING CORRECTION STATE === */
+    int timing_correction_enabled;   /* Enable real-time phase/slant correction */
+    double timing_correction_gain;   /* Gain for feedback correction */
+    double timing_error;             /* Estimated timing error in samples */
+    double timing_correction;        /* Applied correction in samples */
+    double timing_error_accum;       /* Smoothed timing error */
+    int timing_error_count;          /* Samples contributing to estimate */
+    int timing_phase_sign;           /* Sign of current drift estimate */
 
     /* === SYNC TRACKING === */
     int sync_mode;                   /* MMSSTV sync state (m_SyncMode) */
@@ -396,12 +431,9 @@ static const vis_map_entry_t VIS_CODE_MAP[] = {
     { 0x86, SSTV_ML240 },       /* Martin L240 (extended - note: same code as BW12, disambiguated by prefix) */
     { 0x89, SSTV_ML280 },       /* Martin L280 (extended) */
     { 0x8A, SSTV_ML320 },       /* Martin L320 (extended) */
-    { 0x73, SSTV_MN73 },        /* Martin N73 (extended) */
-    { 0x6E, SSTV_MN110 },       /* Martin N110 (extended) */
-    { 0x8C, SSTV_MN140 },       /* Martin N140 (extended) */
-    { 0x6A, SSTV_MC110 },       /* Martin C110 (extended) */
-    { 0x8D, SSTV_MC140 },       /* Martin C140 (extended) */
-    { 0x8E, SSTV_MC180 },       /* Martin C180 (extended) */
+    /* Narrow modes (MP73-N ... MC180-N) have no VIS. MMSSTV identifies them with a
+     * separate 1900/2100 Hz FSK "N-VIS" header, which this decoder does not decode;
+     * use sstv_decoder_set_mode_hint() for those modes. */
 };
 
 #define VIS_MAP_SIZE (sizeof(VIS_CODE_MAP) / sizeof(vis_map_entry_t))
@@ -420,14 +452,14 @@ static int decoder_check_vis_ready(sstv_decoder_t *dec, sstv_mode_t *mode_out);
 static int decoder_try_vis_from_buffer(sstv_decoder_t *dec, sstv_mode_t *mode_out);
 static int vis_parity_ok(uint8_t vis_code);
 static sstv_mode_t vis_code_to_mode(uint8_t vis_code, int is_extended);
-static double agc_calculate_gain(sstv_decoder_t *dec, double vis_energy);
-static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode);
+static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode, int start_kind);
 static void level_agc_init(level_agc_t *lvl, double sample_rate);
 static void level_agc_do(level_agc_t *lvl, double d);
 static void level_agc_fix(level_agc_t *lvl);
 static double level_agc_apply(level_agc_t *lvl, double d);
 static void decoder_set_sense_levels(sstv_decoder_t *dec);
 static double hill_do(sstv_decoder_t *dec, double in);
+static void hill_set_width(sstv_decoder_t *dec, int narrow);
 static void lnd_flush_line(sstv_decoder_t *dec);
 static void decoder_process_image_sample(sstv_decoder_t *dec, double sig);
 
@@ -453,11 +485,8 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
     dec->debug_wav_final = NULL;
     dec->debug_wav_sample_count = 0;
     
-    /* Initialize AGC */
-    dec->agc_mode = SSTV_AGC_AUTO;   /* Default to AUTO mode (kept for API) */
-    dec->agc_gain = 1.0;
-    dec->agc_peak_level = 0.0;
-    dec->agc_sample_count = 0;
+    /* AGC: any mode other than OFF runs the MMSSTV level AGC */
+    dec->agc_mode = SSTV_AGC_AUTO;
     
         /* Allocate VIS buffers (store ~800ms of energies) */
         dec->vis.buf_size = (int)(0.800 * sample_rate);
@@ -478,15 +507,18 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
     dec->lpf12.MakeIIR(50.0, sample_rate, 2, 0, 0);
     dec->lpf13.MakeIIR(50.0, sample_rate, 2, 0, 0);
     dec->lpf19.MakeIIR(50.0, sample_rate, 2, 0, 0);
+    dec->iirfsk.SetFreq(2100.0, sample_rate, 100.0);   /* MMSSTV FSKSPACE */
+    dec->lpffsk.MakeIIR(50.0, sample_rate, 2, 0, 0);
 
-    /* MMSSTV BPF taps: HBPF (1100-2600) and HBPFS (400-2500) */
+    /* MMSSTV BPF taps (CSSTVDEM::CalcBPF, "wide" setting): HBPF (1100-2600 Hz, used once
+     * image decoding starts; low edge is 1100 because m_SyncRestart defaults to 1) and
+     * HBPFS (400-2500 Hz, used while hunting for VIS). */
     dec->use_bpf = 1;
     dec->bpftap = (int)(24.0 * sample_rate / 11025.0);
     if (dec->bpftap < 1) dec->bpftap = 1;
     dec->hbpf.assign(dec->bpftap + 1, 0.0);
     dec->hbpfs.assign(dec->bpftap + 1, 0.0);
-    /* MMSSTV BPF: HBPF for narrow (1080-2600 Hz for VIS/data), HBPFS for wide (400-2500 Hz for initial sync) */
-    sstv_dsp::MakeFilter(dec->hbpf.data(), dec->bpftap, sstv_dsp::kFfBPF, sample_rate, 1080.0, 2600.0, 20.0, 1.0);
+    sstv_dsp::MakeFilter(dec->hbpf.data(), dec->bpftap, sstv_dsp::kFfBPF, sample_rate, 1100.0, 2600.0, 20.0, 1.0);
     sstv_dsp::MakeFilter(dec->hbpfs.data(), dec->bpftap, sstv_dsp::kFfBPF, sample_rate, 400.0, 2500.0, 20.0, 1.0);
     dec->bpf.Create(dec->bpftap);
     
@@ -510,12 +542,7 @@ sstv_decoder_t* sstv_decoder_create(double sample_rate) {
     dec->hill_z.assign(dec->hill_tap + 1, 0.0);
     sstv_dsp::MakeHilbert(dec->hill_h.data(), dec->hill_tap, sample_rate, 100.0, sample_rate / 2.0 - 100.0);
     memset(dec->hill_A, 0, sizeof(dec->hill_A));
-    /* m_OFF and m_OUT are multiplied/divided by 2^df to match the wider phase window */
-    {
-        double df_mult = (dec->hill_df == 2) ? 4.0 : (dec->hill_df == 1) ? 2.0 : 1.0;
-        dec->hill_off       = (2.0 * M_PI * 1900.0) / sample_rate * df_mult;
-        dec->hill_out_scale = 32768.0 * sample_rate / (2.0 * M_PI * 800.0) / df_mult;
-    }
+    hill_set_width(dec, 0);
     dec->hill_lpf.MakeIIR(1800.0, sample_rate, 3, 0, 0);
     dec->hill_demod_last = 0.0;
 
@@ -648,55 +675,6 @@ void sstv_decoder_disable_debug_wav(sstv_decoder_t *dec) {
 
 /* === INTERNAL HELPERS === */
 
-/*
- * Calculate AGC gain based on current mode and signal level
- * Returns gain multiplier to be applied to vis_energy values
- */
-static double agc_calculate_gain(sstv_decoder_t *dec, double vis_energy) {
-    if (!dec) return 1.0;
-    
-    /* Track peak signal level */
-    double abs_energy = fabs(vis_energy);
-    if (abs_energy > dec->agc_peak_level) {
-        dec->agc_peak_level = abs_energy;
-    }
-    dec->agc_sample_count++;
-    
-    /* Calculate gain based on AGC mode */
-    switch (dec->agc_mode) {
-        case SSTV_AGC_OFF:
-            return 1.0;
-            
-        case SSTV_AGC_LOW:
-            /* 5% gain if signal is weak (< 0.05) */
-            return (dec->agc_peak_level < 0.05) ? 1.05 : 1.0;
-            
-        case SSTV_AGC_MED:
-            /* 10% gain if signal is weak (< 0.05) */
-            return (dec->agc_peak_level < 0.05) ? 1.10 : 1.0;
-            
-        case SSTV_AGC_HIGH:
-            /* 20% gain if signal is weak (< 0.05) */
-            return (dec->agc_peak_level < 0.05) ? 1.20 : 1.0;
-            
-        case SSTV_AGC_SEMI:
-            /* Fixed 6dB boost (2x power = ~1.41x amplitude, use 2.0 for simplicity) */
-            return 2.0;
-            
-        case SSTV_AGC_AUTO:
-            /* Auto-select mode based on peak level */
-            if (dec->agc_peak_level < 0.02) {
-                return 1.30;  /* Very strong boost for very weak signals */
-            } else if (dec->agc_peak_level < 0.05) {
-                return 1.15;  /* Medium boost for weak signals */
-            }
-            return 1.0;  /* No boost for strong signals */
-            
-        default:
-            return 1.0;
-    }
-}
-
 /* CSYNCINT sync tracker implementation (MMSSTV parity) */
 static void sync_tracker_init(sync_tracker_t *st) {
     if (!st) return;
@@ -825,6 +803,112 @@ static void decoder_set_sense_levels(sstv_decoder_t *dec) {
     }
 }
 
+/*
+ * Narrow-mode N-VIS decoder: port of the N-VIS path of MMSSTV
+ * CSSTVDEM::DecodeFSK(). m = 1900 Hz (mark) energy, s = 2100 Hz (space)
+ * energy. The header MMSSTV sends before a narrow-mode image is a 2100 Hz
+ * guard (100 ms), a 1900 Hz start bit, then 6-bit words LSB-first at 22 ms per
+ * bit (1900 Hz = 1): 0x2d, 0x15, the N-VIS code, and code ^ 0x15.
+ * Returns the detected narrow mode, or SSTV_MODE_COUNT.
+ */
+static sstv_mode_t decoder_decode_nvis(sstv_decoder_t *dec, double m, double s) {
+    const double kFskGuardMs = 100.0;
+    const double kFskBitMs = 22.0;
+    const double kFskLevel = 2048.0;
+    const double fs = dec->sample_rate;
+    double d = fabs(m - s);
+    sstv_mode_t found = SSTV_MODE_COUNT;
+
+    switch (dec->fsk_mode) {
+    case 0:     /* space carrier (guard tone) */
+        if (s > m && d >= kFskLevel) {
+            dec->fsk_time = (long)(kFskGuardMs / 2 * fs / 1000.0);
+            dec->fsk_mode = 1;
+        }
+        break;
+    case 1:     /* guard tone continues for half its length */
+        if (s > m && d >= kFskLevel) {
+            if (--dec->fsk_time <= 0) {
+                dec->fsk_time = (long)(kFskGuardMs * fs / 1000.0);
+                dec->fsk_mode = 2;
+            }
+        } else {
+            dec->fsk_mode = 0;
+        }
+        break;
+    case 2:     /* wait for the start bit (mark) */
+        if (--dec->fsk_time <= 0) {
+            dec->fsk_mode = 0;
+        } else if (m > s && d >= kFskLevel) {
+            dec->fsk_time = (long)(kFskBitMs / 2 * fs / 1000.0);
+            dec->fsk_mode = 3;
+        }
+        break;
+    case 3:     /* start bit is still mark at its midpoint */
+        if (--dec->fsk_time <= 0) {
+            if (m > s && d >= kFskLevel) {
+                dec->fsk_time = 0;
+                dec->fsk_nextd = kFskBitMs / 1000.0 * fs;
+                dec->fsk_nexti = (long)dec->fsk_nextd;
+                dec->fsk_bcnt = 0;
+                dec->fsk_c = 0;
+                dec->fsk_mode = 4;
+            } else {
+                dec->fsk_mode = 0;
+            }
+        }
+        break;
+    default:    /* 4 = first word, 16..18 = N-VIS words; one sample per bit */
+        dec->fsk_time++;
+        if (dec->fsk_time < dec->fsk_nexti) break;
+        if (d < kFskLevel) {
+            dec->fsk_mode = 0;
+            break;
+        }
+        dec->fsk_nextd += kFskBitMs / 1000.0 * fs;
+        dec->fsk_nexti = (long)dec->fsk_nextd;
+        dec->fsk_c >>= 1;
+        if (m > s) dec->fsk_c |= 0x20;
+        if (++dec->fsk_bcnt < 6) break;
+        dec->fsk_bcnt = 0;
+        switch (dec->fsk_mode) {
+        case 4:     /* 0x2d introduces an N-VIS (0x2a would be a callsign ID) */
+            dec->fsk_s = 0;
+            dec->fsk_mode = (dec->fsk_c == 0x2d) ? 16 : 0;
+            break;
+        case 16:
+            dec->fsk_s ^= dec->fsk_c;
+            dec->fsk_mode = (dec->fsk_c == 0x15) ? 17 : 0;
+            break;
+        case 17:
+            dec->fsk_s ^= dec->fsk_c;
+            dec->fsk_code = dec->fsk_c;
+            dec->fsk_mode = 18;
+            break;
+        case 18:
+            if (dec->fsk_c == (dec->fsk_s & 0x3f)) {
+                switch (dec->fsk_code) {
+                    case 0x02: found = SSTV_MN73;  break;
+                    case 0x04: found = SSTV_MN110; break;
+                    case 0x05: found = SSTV_MN140; break;
+                    case 0x14: found = SSTV_MC110; break;
+                    case 0x15: found = SSTV_MC140; break;
+                    case 0x16: found = SSTV_MC180; break;
+                    default: break;
+                }
+            }
+            dec->fsk_mode = 0;
+            break;
+        default:
+            dec->fsk_mode = 0;
+            break;
+        }
+        dec->fsk_c = 0;
+        break;
+    }
+    return found;
+}
+
 static void decoder_reset_state(sstv_decoder_t *dec) {
     if (!dec) return;
     
@@ -837,7 +921,15 @@ static void decoder_reset_state(sstv_decoder_t *dec) {
     dec->vis_cnt = 0;
     dec->vis_extended = 0;
     dec->vis_inverted = 0;
-    
+    dec->fsk_mode = 0;
+    dec->fsk_time = 0;
+    dec->fsk_nextd = 0.0;
+    dec->fsk_nexti = 0;
+    dec->fsk_bcnt = 0;
+    dec->fsk_c = 0;
+    dec->fsk_s = 0;
+    dec->fsk_code = 0;
+
     /* Reset MMSSTV sync trackers */
     sync_tracker_init(&dec->sint1);
     sync_tracker_init(&dec->sint2);
@@ -857,10 +949,7 @@ static void decoder_reset_state(sstv_decoder_t *dec) {
     dec->vis.buffering = 0;
     dec->vis.invert_polarity = 0;
     dec->vis.polarity_samples = 0;
-    
-    /* Reset AGC tracking for fresh VIS detection */
-    dec->agc_peak_level = 0.0;
-    dec->agc_sample_count = 0;
+
 
     /* Reset demod state */
     dec->prev_sample = 0.0;
@@ -875,14 +964,28 @@ static void decoder_reset_state(sstv_decoder_t *dec) {
     /* Reset scan line / image decoder state */
     dec->line_pos      = 0.0;
     dec->d12_last      = 0.0;
+    dec->d19_last      = 0.0;
+    dec->scan_sync_1900 = 0;
     dec->sync_ofp      = 0.0;
     dec->sync_peak_val = 0.0;
     dec->sync_peak_pos = 0;
+    dec->timing_correction_enabled = 1;
+    dec->timing_correction_gain = 0.04;
+    dec->timing_error = 0.0;
+    dec->timing_correction = 0.0;
+    dec->timing_error_accum = 0.0;
+    dec->timing_error_count = 0;
+    dec->timing_phase_sign = 0;
     dec->lnd_img_line  = 0;
     dec->ch0_buf.clear();
     dec->ch1_buf.clear();
     dec->ch2_buf.clear();
     dec->ch3_buf.clear();
+    dec->r36_ry.clear();
+    dec->r36_by.clear();
+    dec->r36_sep_sum = 0.0;
+    dec->r36_sep_n   = 0;
+    dec->r36_dsel    = 1;
     dec->img_dec.state = IMAGE_IDLE;
 
     /* Clear image buffer */
@@ -948,14 +1051,13 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
         write_sample_to_wav(dec->debug_wav_after_bpf, d);
     }
 
-    /* AGC (MMSSTV) */
-    #if 1
-    level_agc_do(&dec->lvl, d);
-    level_agc_fix(&dec->lvl);
-    double ad = level_agc_apply(&dec->lvl, d);
-    #else
+    /* AGC (MMSSTV CLVL); bypassed when the caller selects SSTV_AGC_OFF */
     double ad = d;
-    #endif
+    if (dec->agc_mode != SSTV_AGC_OFF) {
+        level_agc_do(&dec->lvl, d);
+        level_agc_fix(&dec->lvl);
+        ad = level_agc_apply(&dec->lvl, d);
+    }
 
     /* Debug WAV: Write AFTER AGC (clean normalized signal) */
     if (dec->debug_wav_after_agc) {
@@ -993,7 +1095,13 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
     double d19 = dec->iir19.Do(d);
     if (d19 < 0.0) d19 = -d19;
     d19 = dec->lpf19.Do(d19);
-    
+    dec->d19_last = d19;
+
+    /* 2100 Hz FSK space detector for the narrow-mode N-VIS header */
+    double dsp = dec->iirfsk.Do(d);
+    if (dsp < 0.0) dsp = -dsp;
+    dsp = dec->lpffsk.Do(dsp);
+
     /* Additional tone detectors for image data */
     double d11 = dec->iir11.Do(d);
     if (d11 < 0.0) d11 = -d11;
@@ -1028,37 +1136,37 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
     /* Sync/VIS state machine (MMSSTV parity with leader tracking)
      * Guard: do NOT run sync detection once image decoding has started —
      * the scan-line sync pulses would re-trigger case 0 and clobber sync_state. */
-    if (dec->sync_state == SYNC_DATA_WAIT) goto sync_done;
+    if (dec->sync_state == SYNC_DATA_WAIT || !dec->vis_enabled) goto sync_done;
+
+    /* Narrow modes identify themselves with an FSK N-VIS instead of a VIS */
+    {
+        sstv_mode_t nmode = decoder_decode_nvis(dec, d19, dsp);
+        if (nmode != SSTV_MODE_COUNT) {
+            if (dec->debug_level >= 2) {
+                fprintf(stderr, "[DECODER] N-VIS decoded: 0x%02x \xe2\x86\x92 mode %d\n",
+                        dec->fsk_code, nmode);
+            }
+            dec->detected_mode = nmode;
+            dec->sync_state = SYNC_DATA_WAIT;
+            dec->sync_mode = 0;
+            if (!dec->image_buf.pixels)
+                decoder_allocate_image_buffer(dec, nmode, IMAGE_START_NVIS);
+            goto sync_done;
+        }
+    }
     switch (dec->sync_mode) {
         case 0:
-            /* MMSSTV: Wait for VIS START BIT (1200 Hz, 30ms) - NOT the leader!
-             * The VIS leaders (300ms+10ms+300ms @ 1900/1200/1900 Hz) are ignored.
-             * Detection begins when the 30ms START BIT at 1200 Hz appears.
-             * 
-             * CRITICAL: Must not trigger on the 10ms VIS break (also at 1200 Hz)
-             * Solution: Require sustained 1200 Hz for 12ms before starting validation
-             */
+            /* MMSSTV case 0: wait for the VIS start bit (1200 Hz). The 10 ms break
+             * between the two leaders is also 1200 Hz; it is rejected by the 15 ms
+             * continuity check in case 1, exactly as in MMSSTV. */
             if ((d12 > d19) && (d12 > dec->s_lvl) && ((d12 - d19) >= dec->s_lvl)) {
-                /* 1200 Hz detected - accumulate samples */
-                if (dec->sync_time == 0) {
-                    /* First detection - start counter */
-                    dec->sync_time = (int)(12.0 * dec->sample_rate / 1000.0);  /* 12ms threshold */
-                } else {
-                    dec->sync_time--;
-                    if (!dec->sync_time) {
-                        /* Sustained for 12ms - this is likely the START BIT, not the break */
-                        if (dec->debug_level >= 2) {
-                            fprintf(stderr, "[SYNC] VIS start bit detected (sustained 1200 Hz), validating (mode 0→1)\n");
-                        }
-                        dec->sync_mode = 1;
-                        dec->sync_time = (int)(15.0 * dec->sample_rate / 1000.0);  /* 15ms validation */
-                        dec->sync_state = SYNC_DETECTED;
-                        sync_tracker_init(&dec->sint1);
-                    }
+                if (dec->debug_level >= 2) {
+                    fprintf(stderr, "[SYNC] 1200 Hz detected, validating start bit (mode 0→1)\n");
                 }
-            } else {
-                /* 1200 Hz lost - reset counter */
-                dec->sync_time = 0;
+                dec->sync_mode = 1;
+                dec->sync_time = (int)(15.0 * dec->sample_rate / 1000.0);  /* 15ms validation */
+                dec->sync_state = SYNC_DETECTED;
+                sync_tracker_init(&dec->sint1);
             }
             break;
         case 1:
@@ -1178,7 +1286,7 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
                                     }
                                     /* Allocate immediately so samples in this same batch aren't dropped */
                                     if (!dec->image_buf.pixels)
-                                        decoder_allocate_image_buffer(dec, mode);
+                                        decoder_allocate_image_buffer(dec, mode, IMAGE_START_VIS);
                                 } else if (dec->debug_level >= 2) {
                                     fprintf(stderr, "[VIS] VIS code 0x%02x (or 0x%02x) not recognized\n",
                                             raw, (uint8_t)(raw ^ 0xFF));
@@ -1200,7 +1308,7 @@ static void decoder_process_sample(sstv_decoder_t *dec, double sample) {
                                 }
                                 /* Allocate immediately so samples in this same batch aren't dropped */
                                 if (!dec->image_buf.pixels)
-                                    decoder_allocate_image_buffer(dec, mode);
+                                    decoder_allocate_image_buffer(dec, mode, IMAGE_START_VIS);
                             }
                             dec->sync_mode = 0;
                         }
@@ -1235,22 +1343,16 @@ static sstv_mode_t vis_code_to_mode(uint8_t vis_code, int is_extended) {
         if (VIS_CODE_MAP[i].vis_code == vis_code) {
             sstv_mode_t mode = VIS_CODE_MAP[i].mode;
             
-            /* Disambiguate extended codes that share same byte value */
+            /* Disambiguate extended codes that share same byte value (e.g. 0x86) */
             if (is_extended) {
-                /* Extended VIS codes: MR, MP, ML, MN, MC series (NOT Robot 24, B/W 8, B/W 12) */
-                /* MR series: 21-25, MP series: 26-29, ML series: 30-33, MN series: 38-40, MC series: 41-43 */
-                if ((mode >= SSTV_MR73 && mode <= SSTV_ML320) ||
-                    (mode >= SSTV_MN73 && mode <= SSTV_MC180)) {
+                /* Extended (0x23-prefixed) VIS: MR, MP, ML series only */
+                if (mode >= SSTV_MR73 && mode <= SSTV_ML320) {
                     return mode;
                 }
             } else {
-                /* Standard VIS: accept all modes except narrow (*-N) series (SSTV_MN73..SSTV_MC180)
-                 * which have no VIS headers and must not match via complement lookup.
-                 * MR/MP/ML extended modes are intentionally allowed here because the test
-                 * WAV files encode them as plain 8-bit VIS (not 2-byte extended format). */
-                if (mode < SSTV_MN73 || mode > SSTV_MC180) {
-                    return mode;
-                }
+                /* Standard VIS. MR/MP/ML second bytes are intentionally allowed here
+                 * because some test WAV files encode them as plain 8-bit VIS. */
+                return mode;
             }
         }
     }
@@ -1364,7 +1466,36 @@ static int vis_parity_ok(uint8_t vis_code) {
  * @param mode SSTV mode
  * @return 0 on success, -1 on error
  */
-static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode) {
+static void decoder_finalize_image(sstv_decoder_t *dec) {
+    if (!dec || !dec->image_buf.pixels || dec->img_dec.state == IMAGE_COMPLETE) {
+        return;
+    }
+
+    if (dec->lnd_img_line < dec->image_buf.height) {
+        bool has_data = false;
+        for (size_t i = 0; i < dec->ch0_buf.size(); ++i) {
+            if (fabs(dec->ch0_buf[i]) > 0.0001 || fabs(dec->ch1_buf[i]) > 0.0001 ||
+                fabs(dec->ch2_buf[i]) > 0.0001 || fabs(dec->ch3_buf[i]) > 0.0001) {
+                has_data = true;
+                break;
+            }
+        }
+        if (has_data || dec->lnd_img_line > 0) {
+            lnd_flush_line(dec);
+        }
+    }
+
+    if (dec->lnd_img_line >= dec->image_buf.height || dec->image_buf.current_line >= dec->image_buf.height) {
+        dec->img_dec.state = IMAGE_COMPLETE;
+        dec->last_status = SSTV_RX_IMAGE_READY;
+        if (dec->debug_level >= 2) {
+            fprintf(stderr, "[DECODER] Finalized image after end-of-stream (%d lines)\n",
+                    dec->lnd_img_line);
+        }
+    }
+}
+
+static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode, int start_kind) {
     if (!dec) return -1;
     if (mode < 0 || mode >= SSTV_MODE_COUNT) return -1;
 
@@ -1408,19 +1539,28 @@ static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode) 
     dec->scan_SB   = t->sb_ms  * k;
     dec->scan_CB   = t->cb_ms  * k;
     dec->scan_KS2  = t->ks2_ms * k;
-    dec->scan_KS2S = (t->kss_div > 0 && dec->scan_KS2 > 0.0)
-                     ? dec->scan_KS2 * (1.0 - 1.0 / t->kss_div)
+    /* MMSSTV uses the same divisor for KS2S as for KSS, except MR73 (1024 vs 640) */
+    int ks2s_div = (mode == SSTV_MR73) ? 1024 : t->kss_div;
+    dec->scan_KS2S = (ks2s_div > 0 && dec->scan_KS2 > 0.0)
+                     ? dec->scan_KS2 * (1.0 - 1.0 / ks2s_div)
                      : dec->scan_KS2;
     /* SCAN_YC ch1/ch2 map via KS2S; if no ks2 defined, fall back to KSS */
     if (dec->scan_KS2S < 1.0) dec->scan_KS2S = dec->scan_KSS;
     dec->scan_color_type = t->color_type;
     dec->scan_row_double = t->row_double;
+    dec->scan_sync_1900  = (mode >= SSTV_MN73 && mode <= SSTV_MC180) ? 1 : 0;
+    hill_set_width(dec, dec->scan_sync_1900);   /* narrow video band for *-N modes */
 
     /* Per-column channel accumulation buffers (one double per image column) */
     dec->ch0_buf.assign(info->width, 0.0);
     dec->ch1_buf.assign(info->width, 0.0);
     dec->ch2_buf.assign(info->width, 0.0);
     dec->ch3_buf.assign(info->width, 0.0);
+    dec->r36_ry.assign(info->width, 0.0);
+    dec->r36_by.assign(info->width, 0.0);
+    dec->r36_sep_sum = 0.0;
+    dec->r36_sep_n   = 0;
+    dec->r36_dsel    = 1;   /* line 0 carries R-Y (toggle rule picks 0 first) */
 
     /* Offset line_pos by the VIS stop-bit duration so that the scan sync
      * at the start of line 0 aligns correctly with scan_OF.
@@ -1438,23 +1578,41 @@ static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode) 
      * We must add this preamble to the initial negative offset so that
      * line_pos reaches 0 exactly when the first scan SYNC fires. */
     {
-        double stop_bit_samples = 0.030 * dec->sample_rate;
+        /* Time from header decode to the start of line 0.
+         *  VIS:   the last VIS bit is sampled 15 ms (MMSSTV case-1 validation)
+         *         plus ~9.5 ms (latency of the 1200 Hz detector: iir12 + 50 Hz
+         *         LPF + threshold) after that bit starts, leaving 30 - 24.5 =
+         *         5.5 ms of the bit plus the 30 ms stop bit.
+         *  N-VIS: bits are sampled half a bit (11 ms) plus the same detector
+         *         latency after they start, so ~1.5 ms of the last bit remains.
+         *  Hint:  no header was decoded; only a stop bit is assumed. */
+        double lead_ms = 30.0;
+        if (start_kind == IMAGE_START_VIS)  lead_ms = 35.5;
+        if (start_kind == IMAGE_START_NVIS) lead_ms = 1.5;
+        if (start_kind == IMAGE_START_VIS && mode == SSTV_AVT90) {
+            /* MMSSTV sends VIS three times, then a 32-frame digital header
+             * (32 x 17 x 9.7646 ms) and a 0.305 ms gap (TMmsstv VIS/AVT TX). */
+            lead_ms += 910.0 + 910.0 + 32.0 * 17.0 * 9.7646 + 0.30514375;
+        }
         double extra_preamble_samples = 0.0;
         if (mode == SSTV_SCOTTIE1 || mode == SSTV_SCOTTIE2 || mode == SSTV_SCOTTIEX) {
             double preamble_ms = 9.0 + t->tw_ms - t->of_ms - t->ks_ms;
             extra_preamble_samples = preamble_ms * k;
         }
-        dec->line_pos = -(stop_bit_samples + extra_preamble_samples);
+        /* AVT has no line sync to re-lock on, so the demodulator's own delay
+         * (group delay of the band-pass and Hilbert FIRs) must be added here;
+         * for all other modes the sync re-lock absorbs it. */
+        double demod_delay = (mode == SSTV_AVT90) ? (dec->bpftap + dec->hill_tap) / 2.0 : 0.0;
+        dec->line_pos = -(lead_ms * k + extra_preamble_samples + demod_delay);
     }
-    /* Expected 1200 Hz sync-peak position for per-line re-lock convergence.
-     * For Scottie modes, disable re-lock (ofp_ms=0 in table) since the
-     * preamble calculation already gives exact alignment.
-     * For all other modes use scan_OF/2 — the re-lock convergence dynamically
-     * corrects for any initial timing offset over the first few lines. */
+    /* Expected sync-peak position for per-line re-lock convergence: the
+     * mode-specific MMSSTV m_OFP value (SetSampFreq). Scottie lines are framed
+     * to start at their (mid-line) sync pulse, so m_OFP applies there too.
+     * AVT has no line sync (ofp_ms = 0), which disables re-lock. */
     if (t->ofp_ms > 0.0) {
-        dec->sync_ofp = dec->scan_OF * 0.5;
+        dec->sync_ofp = t->ofp_ms * k;
     } else {
-        dec->sync_ofp = 0.0;  /* disabled: Scottie modes */
+        dec->sync_ofp = 0.0;
     }
     dec->sync_peak_val = 0.0;
     dec->sync_peak_pos = 0;
@@ -1483,6 +1641,21 @@ static int decoder_allocate_image_buffer(sstv_decoder_t *dec, sstv_mode_t mode) 
  *
  * Output range: +16384 at 1500 Hz (black), -16384 at 2300 Hz (white).
  */
+/*
+ * Demodulator centre and span (port of MMSSTV CHILL::SetWidth): 1900 Hz / 800 Hz
+ * (1500..2300 Hz video) normally, or NARROW_CENTER / NARROW_BW (2044..2300 Hz
+ * video) for the narrow modes. m_OFF and m_OUT are multiplied/divided by 2^df
+ * to match the wider phase-difference window at higher sample rates.
+ */
+static void hill_set_width(sstv_decoder_t *dec, int narrow) {
+    const double kNarrowLow = 2044.0, kNarrowHigh = 2300.0;
+    double center = narrow ? (kNarrowHigh + kNarrowLow) / 2.0 : 1900.0;
+    double span   = narrow ? (kNarrowHigh - kNarrowLow) : 800.0;
+    double df_mult = (dec->hill_df == 2) ? 4.0 : (dec->hill_df == 1) ? 2.0 : 1.0;
+    dec->hill_off       = (2.0 * M_PI * center) / dec->sample_rate * df_mult;
+    dec->hill_out_scale = 32768.0 * dec->sample_rate / (2.0 * M_PI * span) / df_mult;
+}
+
 static double hill_do(sstv_decoder_t *dec, double in) {
     /* Quadrature component via Hilbert FIR */
     double quad = sstv_dsp::DoFIR(dec->hill_h.data(), dec->hill_z.data(), in, dec->hill_tap);
@@ -1581,12 +1754,23 @@ static void lnd_flush_line(sstv_decoder_t *dec) {
 
     case SCAN_YC:
     case SCAN_R36: {
+        if (dec->scan_color_type == SCAN_R36) {
+            /* MMSSTV m_DSEL: a clear 2300 Hz separator means B-Y, a clear 1500 Hz
+             * separator means R-Y; if ambiguous, alternate from the last line. */
+            double sep = dec->r36_sep_n ? dec->r36_sep_sum / dec->r36_sep_n : 0.0;
+            if (sep >= 64.0)       dec->r36_dsel = 1;
+            else if (sep <= -64.0) dec->r36_dsel = 0;
+            else                   dec->r36_dsel = dec->r36_dsel ? 0 : 1;
+            std::vector<double> &dst = dec->r36_dsel ? dec->r36_by : dec->r36_ry;
+            std::copy(dec->ch2_buf.begin(), dec->ch2_buf.end(), dst.begin());
+            dec->r36_sep_sum = 0.0;
+            dec->r36_sep_n   = 0;
+        }
         for (int x = 0; x < w; x++) {
             int rv, gv, bv;
             if (dec->scan_color_type == SCAN_R36) {
-                /* Simplified: output luma as grayscale */
-                int y = (int)(dec->ch0_buf[x] + 0.5);
-                rv = gv = bv = y < 0 ? 0 : y > 255 ? 255 : y;
+                yc_to_rgb((int)(dec->ch0_buf[x] + 0.5),
+                          dec->r36_ry[x], dec->r36_by[x], &rv, &gv, &bv);
             } else {
                 yc_to_rgb((int)(dec->ch0_buf[x] + 0.5),
                           dec->ch1_buf[x], dec->ch2_buf[x], &rv, &gv, &bv);
@@ -1655,47 +1839,71 @@ static void decoder_process_image_sample(sstv_decoder_t *dec, double sig) {
     dec->line_pos += 1.0;
 
     /*
-     * Per-line sync re-lock: track 1200 Hz energy peak within the sync region.
-     *   – At line start (ps < 1.0): reset peak accumulators.
-     *   – While ps < scan_OF*1.5: keep the position of the highest d12 value.
-     * The correction is applied at end-of-line (below) and nudges line_pos
-     * toward the expected sync-peak position (sync_ofp ≈ scan_OF/2), mirroring
-     * MMSSTV's m_SyncPos / m_OFP / m_Skip per-line correction.
+     * Per-line sync tracking (MMSSTV m_SyncPos): find the position of the
+     * strongest sync-tone energy anywhere in the current scan line. The sync
+     * tone is 1200 Hz, or 1900 Hz for the narrow modes (MMSSTV stores d19 in
+     * m_B12 when m_fNarrow). The peak is consumed and reset at end-of-line.
      */
-    if (ps < 1.0) {
-        dec->sync_peak_val = dec->d12_last;
-        dec->sync_peak_pos = 0;
-    } else if (ps < dec->scan_OF * 1.5 && dec->d12_last > dec->sync_peak_val) {
-        dec->sync_peak_val = dec->d12_last;
-        dec->sync_peak_pos = (int)ps;
+    if (ps >= 0.0) {
+        double sync_lvl = dec->scan_sync_1900 ? dec->d19_last : dec->d12_last;
+        if (sync_lvl > dec->sync_peak_val) {
+            dec->sync_peak_val = sync_lvl;
+            dec->sync_peak_pos = (int)ps;
+        }
     }
 
     /* End of scan line: apply re-lock nudge, then flush and advance */
     if (dec->line_pos >= dec->scan_TW) {
         dec->line_pos -= dec->scan_TW;
 
-        /* Sync re-lock: nudge line_pos toward expected sync-peak position.
-         * Skip the first line (lnd_img_line==0) to let the tracking warm up.
-         * Clamp error to ±40 % of the sync region to avoid wild corrections.
-         * Apply at half weight to damp oscillation (smooth IIR-style).
-         * Require sync_peak_val > s_lvl (AGC signal level) to avoid applying
-         * corrections based on noise or picture content, not true sync.
-         * NOTE: allow small negative line_pos — a slightly negative value just
-         * means we start a few samples before line start, which is fine (they
-         * fall in the guard region ps < scan_OF).  NEVER add scan_TW here to
-         * "fix" a small negative: that would make line_pos ≈ scan_TW and
-         * trigger an immediate re-flush on the next sample. */
+        /* Sync re-lock: nudge line_pos toward the expected sync-peak position
+         * (sync_ofp, MMSSTV m_OFP). The error is wrapped into ±TW/2 so a sync
+         * that arrives before the decoder's line start (decoder running late)
+         * is seen as a negative error. Skip the first line to let tracking
+         * warm up, and require a peak above noise/picture level.
+         *   – Proportional term: half of the error, clamped to ±15 % of the sync
+         *     region, applied every line.
+         *   – Timing correction (optional): integral term that learns a steady
+         *     per-line drift (TX/RX clock mismatch) from the average error over
+         *     8 lines, so the proportional term does not have to hold a
+         *     permanent phase offset.
+         * NOTE: allow small negative line_pos — those samples fall in the guard
+         * region ps < scan_OF. Never add scan_TW to "fix" a small negative. */
         if (dec->lnd_img_line > 0 && dec->sync_ofp > 0.0
-                && dec->sync_peak_val > 0.0
-                && dec->sync_peak_val > dec->s_lvl * 2.0) {
+                && dec->sync_peak_val > dec->s_lvl * 0.5) {
             double error = (double)dec->sync_peak_pos - dec->sync_ofp;
-            double limit = dec->scan_OF * 0.4;
-            if (error > limit)  error = limit;
-            if (error < -limit) error = -limit;
-            dec->line_pos -= error * 0.5;
-            /* Only clamp extreme overshoot (> TW): should never happen in practice */
-            if (dec->line_pos >= dec->scan_TW) dec->line_pos -= dec->scan_TW;
+            if (error > dec->scan_TW * 0.5)   error -= dec->scan_TW;
+            if (error <= -dec->scan_TW * 0.5) error += dec->scan_TW;
+
+            double limit = dec->scan_OF * 0.15;
+            double p_err = error;
+            if (p_err > limit)  p_err = limit;
+            if (p_err < -limit) p_err = -limit;
+            dec->line_pos -= p_err * 0.5;
+
+            if (dec->timing_correction_enabled) {
+                dec->timing_error_accum += p_err;
+                dec->timing_error_count++;
+                if (dec->timing_error_count >= 8) {
+                    dec->timing_error = dec->timing_error_accum / (double)dec->timing_error_count;
+                    dec->timing_error_accum = 0.0;
+                    dec->timing_error_count = 0;
+                    dec->timing_phase_sign = (dec->timing_error >= 0.0) ? 1 : -1;
+                    dec->timing_correction += dec->timing_error * dec->timing_correction_gain;
+                    /* Cap at 1000 ppm of the line length */
+                    double max_corr = dec->scan_TW * 0.001;
+                    if (dec->timing_correction > max_corr)  dec->timing_correction = max_corr;
+                    if (dec->timing_correction < -max_corr) dec->timing_correction = -max_corr;
+                }
+            }
         }
+        if (dec->timing_correction_enabled) {
+            dec->line_pos -= dec->timing_correction;
+        }
+        /* Only clamp extreme overshoot (> TW): should never happen in practice */
+        if (dec->line_pos >= dec->scan_TW) dec->line_pos -= dec->scan_TW;
+        dec->sync_peak_val = 0.0;
+        dec->sync_peak_pos = 0;
 
         lnd_flush_line(dec);
         if (dec->lnd_img_line >= dec->image_buf.height) {
@@ -1715,11 +1923,22 @@ static void decoder_process_image_sample(sstv_decoder_t *dec, double sig) {
     int    ch      = -1;
     double ps_in   = 0.0;
     double ks_map  = dec->scan_KSS;   /* pixel column mapping width (samples) */
+    double row_bias = 0.0;
 
     switch (dec->scan_color_type) {
     case SCAN_BW:
-    case SCAN_R36:
         if (ps_act < dec->scan_KS)                                   { ch = 0; ps_in = ps_act; }
+        break;
+
+    case SCAN_R36:
+        if      (ps_act < dec->scan_KS)                              { ch = 0; ps_in = ps_act; }
+        else if (ps_act >= dec->scan_SG && ps_act < dec->scan_CG) {
+            /* Separator tone (1500 = R-Y, 2300 = B-Y), chroma-scaled level */
+            dec->r36_sep_sum += -sig / 128.0;
+            dec->r36_sep_n++;
+        }
+        else if (ps_act >= dec->scan_SB && ps_act < dec->scan_CB)    { ch = 2; ps_in = ps_act - dec->scan_SB;
+                                                                       ks_map = dec->scan_KS2S; }
         break;
 
     case SCAN_RGB:
@@ -1744,8 +1963,12 @@ static void decoder_process_image_sample(sstv_decoder_t *dec, double sig) {
 
     if (ch < 0) return;   /* separator region */
 
-    /* Map intra-channel position to pixel column (mirrors x = ps * width / KSS) */
-    int x = (ks_map > 0.0) ? (int)(ps_in * dec->image_buf.width / ks_map) : 0;
+    /* Map intra-channel position to pixel column using the mode timing table
+     * directly; do not add arbitrary width compression or channel bias. */
+    double ps_scaled = ps_in + row_bias;
+    if (ps_scaled < 0.0) ps_scaled = 0.0;
+    if (ks_map > 0.0 && ps_scaled > ks_map) ps_scaled = ks_map;
+    int x = (ks_map > 0.0) ? (int)(ps_scaled * dec->image_buf.width / ks_map) : 0;
     if (x < 0) x = 0;
     if (x >= dec->image_buf.width) x = dec->image_buf.width - 1;
 
@@ -1756,7 +1979,8 @@ static void decoder_process_image_sample(sstv_decoder_t *dec, double sig) {
      * sig from hill_do(): +16384 = 1500 Hz (black), -16384 = 2300 Hz (white).
      */
     bool is_chroma = (dec->scan_color_type == SCAN_YC    && (ch == 1 || ch == 2)) ||
-                     (dec->scan_color_type == SCAN_YC_PD && (ch == 1 || ch == 2));
+                     (dec->scan_color_type == SCAN_YC_PD && (ch == 1 || ch == 2)) ||
+                     (dec->scan_color_type == SCAN_R36   && ch == 2);
     double val = is_chroma ? (-sig / 128.0) : ((16384.0 - sig) / 128.0);
 
     /* Store value — last-wins per column */
@@ -1801,6 +2025,18 @@ void sstv_decoder_set_vis_tones(sstv_decoder_t *dec, double mark_hz, double spac
     dec->iir13.SetFreq(space_hz, dec->sample_rate, 80.0);
 }
 
+void sstv_decoder_enable_timing_correction(sstv_decoder_t *dec, int enable) {
+    if (!dec) return;
+    dec->timing_correction_enabled = enable ? 1 : 0;
+}
+
+void sstv_decoder_set_timing_correction_gain(sstv_decoder_t *dec, double gain) {
+    if (!dec) return;
+    if (gain < 0.0) gain = 0.0;
+    if (gain > 1.0) gain = 1.0;
+    dec->timing_correction_gain = gain;
+}
+
 sstv_rx_status_t sstv_decoder_feed(
     sstv_decoder_t *dec,
     const float *samples,
@@ -1815,7 +2051,7 @@ sstv_rx_status_t sstv_decoder_feed(
     if (dec->mode_hint != SSTV_MODE_COUNT && dec->detected_mode == SSTV_MODE_COUNT) {
         dec->detected_mode = dec->mode_hint;
         if (!dec->image_buf.pixels) {
-            decoder_allocate_image_buffer(dec, dec->mode_hint);
+            decoder_allocate_image_buffer(dec, dec->mode_hint, IMAGE_START_HINT);
         }
         dec->sync_state = SYNC_DATA_WAIT;
     }
@@ -1831,7 +2067,7 @@ sstv_rx_status_t sstv_decoder_feed(
     if (decoder_check_vis_ready(dec, &detected_mode)) {
         /* Allocate image buffer if not already done */
         if (!dec->image_buf.pixels) {
-            if (decoder_allocate_image_buffer(dec, detected_mode) != 0) {
+            if (decoder_allocate_image_buffer(dec, detected_mode, IMAGE_START_VIS) != 0) {
                 if (dec->debug_level >= 1) {
                     fprintf(stderr, "[DECODER] Failed to allocate image buffer\n");
                 }
@@ -1852,6 +2088,27 @@ sstv_rx_status_t sstv_decoder_feed(
     }
 
     /* Still accumulating data */
+    dec->last_status = SSTV_RX_NEED_MORE;
+    return SSTV_RX_NEED_MORE;
+}
+
+sstv_rx_status_t sstv_decoder_finish(sstv_decoder_t *dec) {
+    if (!dec) {
+        return SSTV_RX_ERROR;
+    }
+
+    if (dec->img_dec.state == IMAGE_COMPLETE) {
+        dec->last_status = SSTV_RX_IMAGE_READY;
+        return SSTV_RX_IMAGE_READY;
+    }
+
+    if (dec->image_buf.pixels) {
+        decoder_finalize_image(dec);
+        if (dec->img_dec.state == IMAGE_COMPLETE) {
+            return SSTV_RX_IMAGE_READY;
+        }
+    }
+
     dec->last_status = SSTV_RX_NEED_MORE;
     return SSTV_RX_NEED_MORE;
 }
@@ -1895,6 +2152,8 @@ int sstv_decoder_get_state(sstv_decoder_t *dec, sstv_decoder_state_t *state) {
     state->image_ready = (dec->last_status == SSTV_RX_IMAGE_READY);
     state->current_line = dec->image_buf.current_line;
     state->total_lines = dec->image_buf.height;
+    state->timing_error = dec->timing_error;
+    state->timing_correction = dec->timing_correction;
     
     return 0;
 }
@@ -1907,11 +2166,8 @@ void sstv_decoder_set_debug_level(sstv_decoder_t *dec, int level) {
 void sstv_decoder_set_agc_mode(sstv_decoder_t *dec, sstv_agc_mode_t mode) {
     if (!dec) return;
     dec->agc_mode = mode;
-    /* Reset AGC state when mode changes */
-    dec->agc_gain = 1.0;
-    dec->agc_peak_level = 0.0;
-    dec->agc_sample_count = 0;
-    
+    level_agc_init(&dec->lvl, dec->sample_rate);
+
     if (dec->debug_level >= 2) {
         const char *mode_names[] = {"OFF", "LOW", "MED", "HIGH", "SEMI", "AUTO"};
         if (mode < 6) {

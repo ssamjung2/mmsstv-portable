@@ -184,7 +184,43 @@ int test_decoder_mode_hint(void) {
     return 1;
 }
 
-/* Test 7: Get image (should fail gracefully when empty) */
+/* Test 7: Timing correction toggle */
+int test_decoder_timing_correction(void) {
+    printf("TEST 7: Timing correction toggle\n");
+
+    sstv_decoder_t *dec = sstv_decoder_create(SAMPLE_RATE);
+    if (!dec) {
+        printf("  FAIL: create returned NULL\n");
+        return 0;
+    }
+
+    sstv_decoder_enable_timing_correction(dec, 1);
+    sstv_decoder_set_timing_correction_gain(dec, 0.15);
+
+    size_t sample_count = (size_t)(SAMPLE_RATE * 0.05);
+    float *samples = (float *)calloc(sample_count, sizeof(float));
+    if (!samples) {
+        sstv_decoder_free(dec);
+        printf("  FAIL: memory allocation\n");
+        return 0;
+    }
+
+    generate_sine(samples, sample_count, 1200.0, SAMPLE_RATE, 15000.0);
+    sstv_rx_status_t status = sstv_decoder_feed(dec, samples, sample_count);
+
+    free(samples);
+    sstv_decoder_free(dec);
+
+    if (status == SSTV_RX_ERROR) {
+        printf("  FAIL: decoder_feed returned ERROR\n");
+        return 0;
+    }
+
+    printf("  PASS (status=%d)\n", status);
+    return 1;
+}
+
+/* Test 8: Get image (should fail gracefully when empty) */
 int test_decoder_get_image(void) {
     printf("TEST 7: Get image (before decode complete)\n");
     
@@ -236,6 +272,9 @@ int main(void) {
     
     pass += test_decoder_mode_hint();
     fail += !test_decoder_mode_hint();
+
+    pass += test_decoder_timing_correction();
+    fail += !test_decoder_timing_correction();
     
     pass += test_decoder_get_image();
     fail += !test_decoder_get_image();

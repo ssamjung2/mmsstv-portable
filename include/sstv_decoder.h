@@ -31,14 +31,19 @@ typedef enum {
     SSTV_RX_ERROR = -1
 } sstv_rx_status_t;
 
-/* AGC mode for VIS detection */
+/* Input level control.
+ * The decoder normalizes the band-passed input with MMSSTV's level AGC (CLVL:
+ * 100 ms peak tracking, gain = 16384 / peak, max 512x) before the limiter and
+ * tone detectors. SSTV_AGC_OFF bypasses it; every other value (the default is
+ * SSTV_AGC_AUTO) enables it. LOW/MED/HIGH/SEMI are kept for API compatibility
+ * and currently behave the same as AUTO. */
 typedef enum {
-    SSTV_AGC_OFF = 0,      /* No AGC, use fixed levels */
-    SSTV_AGC_LOW = 1,      /* Minimal gain adjustment (5% of signal peak) */
-    SSTV_AGC_MED = 2,      /* Medium gain adjustment (10% of signal peak) */
-    SSTV_AGC_HIGH = 3,     /* Aggressive gain adjustment (20% of signal peak) */
-    SSTV_AGC_SEMI = 4,     /* Semi-automatic: apply fixed 6 dB gain boost */
-    SSTV_AGC_AUTO = 5      /* Automatic: select mode based on signal level */
+    SSTV_AGC_OFF = 0,      /* Bypass the level AGC */
+    SSTV_AGC_LOW = 1,      /* Level AGC enabled */
+    SSTV_AGC_MED = 2,      /* Level AGC enabled */
+    SSTV_AGC_HIGH = 3,     /* Level AGC enabled */
+    SSTV_AGC_SEMI = 4,     /* Level AGC enabled */
+    SSTV_AGC_AUTO = 5      /* Level AGC enabled (default) */
 } sstv_agc_mode_t;
 
 /* Decoder handle (opaque) */
@@ -85,7 +90,9 @@ void sstv_decoder_reset(sstv_decoder_t *dec);
 void sstv_decoder_set_mode_hint(sstv_decoder_t *dec, sstv_mode_t mode);
 
 /**
- * Enable/disable VIS decode
+ * Enable/disable VIS decode (enabled by default).
+ * When disabled, the decoder does not look for a VIS header, so a mode hint
+ * (sstv_decoder_set_mode_hint) is required to decode an image.
  *
  * @param dec Decoder handle
  * @param enable 1 to enable, 0 to disable
@@ -93,12 +100,38 @@ void sstv_decoder_set_mode_hint(sstv_decoder_t *dec, sstv_mode_t mode);
 void sstv_decoder_set_vis_enabled(sstv_decoder_t *dec, int enable);
 
 /**
- * Set AGC mode for VIS detection
+ * Set input level control (see sstv_agc_mode_t). Changing the mode restarts
+ * the level AGC.
  *
  * @param dec Decoder handle
- * @param mode AGC mode (OFF, LOW, MED, HIGH, SEMI, AUTO)
+ * @param mode AGC mode (SSTV_AGC_OFF disables the level AGC)
  */
 void sstv_decoder_set_agc_mode(sstv_decoder_t *dec, sstv_agc_mode_t mode);
+
+/**
+ * Enable/disable runtime timing correction for slant control (enabled by default).
+ *
+ * Every scan line the decoder re-locks to the line sync pulse. Timing
+ * correction adds a slow integral term on top: it averages the per-line sync
+ * error over 8 lines and learns a steady per-line drift (TX/RX sample-clock
+ * mismatch, up to 1000 ppm), so images stay straight instead of carrying a
+ * constant phase offset.
+ *
+ * @param dec Decoder handle
+ * @param enable 1 to enable, 0 to disable
+ */
+void sstv_decoder_enable_timing_correction(sstv_decoder_t *dec, int enable);
+
+/**
+ * Set the gain of the timing-correction integral term (default 0.04).
+ *
+ * Lower values converge more slowly but are less sensitive to noisy sync;
+ * larger values converge faster.
+ *
+ * @param dec Decoder handle
+ * @param gain Feedback gain in the range [0, 1]
+ */
+void sstv_decoder_set_timing_correction_gain(sstv_decoder_t *dec, double gain);
 
 /**
  * Get current AGC mode
@@ -132,10 +165,14 @@ sstv_rx_status_t sstv_decoder_feed(
 );
 
 /**
- * Retrieve decoded image when SSTV_RX_IMAGE_READY
+ * Retrieve decoded image when SSTV_RX_IMAGE_READY (RGB24).
+ *
+ * The pixel buffer is owned by the decoder: do not free it. It stays valid
+ * until the next sstv_decoder_reset() or sstv_decoder_free(), or until a new
+ * VIS starts another image. Copy it if you need it longer.
  *
  * @param dec Decoder handle
- * @param out_image Output image (caller owns pixels)
+ * @param out_image Output image (pixels point into decoder-owned memory)
  * @return 0 on success, -1 on error
  */
 int sstv_decoder_get_image(sstv_decoder_t *dec, sstv_image_t *out_image);
@@ -150,6 +187,8 @@ typedef struct {
     int image_ready;             /* Image decoding complete */
     int current_line;            /* Current scan line */
     int total_lines;             /* Total lines in image */
+    double timing_error;         /* Mean per-line sync error over the last 8 lines (samples) */
+    double timing_correction;    /* Learned per-line drift correction (samples per line) */
 } sstv_decoder_state_t;
 
 /**
@@ -200,6 +239,19 @@ int sstv_decoder_enable_debug_wav(sstv_decoder_t *dec,
  * @param dec Decoder handle
  */
 void sstv_decoder_disable_debug_wav(sstv_decoder_t *dec);
+
+/**
+ * Finalize decoding after the input stream has ended.
+ *
+ * This flushes any partially accumulated scan line and marks the image as ready
+ * when the decoder has produced an image buffer but the input ended before the
+ * next line boundary. This is especially useful for WAV files whose final scan
+ * line would otherwise remain pending.
+ *
+ * @param dec Decoder handle
+ * @return Decoder status
+ */
+sstv_rx_status_t sstv_decoder_finish(sstv_decoder_t *dec);
 
 /**
  * Feed a single sample (convenience wrapper)

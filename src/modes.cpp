@@ -7,8 +7,11 @@
 #include <string.h>
 #include <ctype.h>
 
-/* Mode information table - extracted from MMSSTV 
- * Duration = (ms_per_line / 1000) * num_lines
+/* Mode information table - extracted from MMSSTV
+ * Duration = (ms_per_line / 1000) * num_lines (image only; excludes preamble/VIS)
+ * vis_code: 8-bit VIS byte including the parity bit (bit 7). For the MR/MP/ML
+ * modes it is the second byte of MMSSTV's 16-bit VIS (sent after 0x23). The
+ * narrow modes have no VIS (0x00); MMSSTV identifies them with an FSK N-VIS.
  */
 static const sstv_mode_info_t mode_table[SSTV_MODE_COUNT] = {
     /* Mode enum      Name            Width Height VIS   Duration(s) Color */
@@ -49,12 +52,12 @@ static const sstv_mode_info_t mode_table[SSTV_MODE_COUNT] = {
     {SSTV_R24,       "Robot 24",      320,  240,  0x84,  24.000,     1},    /* 200.0ms/line × 120 lines */
     {SSTV_BW8,       "B/W 8",         320,  240,  0x82,  8.028,      0},    /* 66.89709ms/line × 120 lines */
     {SSTV_BW12,      "B/W 12",        320,  240,  0x86,  12.000,     0},    /* 100.0ms/line × 120 lines */
-    {SSTV_MN73,      "MP73-N",        320,  256,  0x00,  72.960,     1},    /* 570.0ms/line × 128 lines, VIS not documented */
-    {SSTV_MN110,     "MP110-N",       320,  256,  0x00,  109.824,    1},    /* 858.0ms/line × 128 lines, VIS not documented */
-    {SSTV_MN140,     "MP140-N",       320,  256,  0x00,  139.520,    1},    /* 1090.0ms/line × 128 lines, VIS not documented */
-    {SSTV_MC110,     "MC110-N",       320,  256,  0x00,  109.696,    1},    /* 428.5ms/line × 256 lines, VIS not documented */
-    {SSTV_MC140,     "MC140-N",       320,  256,  0x00,  140.416,    1},    /* 548.5ms/line × 256 lines, VIS not documented */
-    {SSTV_MC180,     "MC180-N",       320,  256,  0x00,  180.352,    1},    /* 704.5ms/line × 256 lines, VIS not documented */
+    {SSTV_MN73,      "MP73-N",        320,  256,  0x00,  72.960,     1},    /* 570.0ms/line × 128 lines, no VIS: FSK N-VIS 0x02 */
+    {SSTV_MN110,     "MP110-N",       320,  256,  0x00,  109.824,    1},    /* 858.0ms/line × 128 lines, no VIS: FSK N-VIS 0x04 */
+    {SSTV_MN140,     "MP140-N",       320,  256,  0x00,  139.520,    1},    /* 1090.0ms/line × 128 lines, no VIS: FSK N-VIS 0x05 */
+    {SSTV_MC110,     "MC110-N",       320,  256,  0x00,  109.696,    1},    /* 428.5ms/line × 256 lines, no VIS: FSK N-VIS 0x14 */
+    {SSTV_MC140,     "MC140-N",       320,  256,  0x00,  140.416,    1},    /* 548.5ms/line × 256 lines, no VIS: FSK N-VIS 0x15 */
+    {SSTV_MC180,     "MC180-N",       320,  256,  0x00,  180.352,    1},    /* 704.5ms/line × 256 lines, no VIS: FSK N-VIS 0x16 */
 };
 
 const sstv_mode_info_t* sstv_get_mode_info(sstv_mode_t mode) {

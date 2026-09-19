@@ -297,6 +297,9 @@ int main(int argc, char **argv)
         free(pcm);
         free(fbuf);
 
+        /* -- finalize decoder after the end of the stream -- */
+        sstv_rx_status_t finish_status = sstv_decoder_finish(dec);
+
         /* --- Check mode --- */
         sstv_decoder_state_t state;
         memset(&state, 0, sizeof(state));
@@ -348,7 +351,8 @@ int main(int argc, char **argv)
         }
 
         /* --- Verdict --- */
-        int entry_pass = mode_ok && (got_img ? dim_ok : 0);
+        int entry_pass = mode_ok && (got_img ? dim_ok : 0) &&
+                         (finish_status == SSTV_RX_IMAGE_READY || state.image_ready);
         printf("  RESULT   : %s\n\n", entry_pass ? "PASS" : "FAIL");
         if (entry_pass) pass_total++; else fail_total++;
 

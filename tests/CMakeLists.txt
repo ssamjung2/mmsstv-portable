@@ -38,12 +38,24 @@ target_include_directories(test_decode_modes PRIVATE
     ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(test_decode_modes PRIVATE sstv_decoder_static m)
 
+add_executable(test_roundtrip test_roundtrip.cpp)
+target_include_directories(test_roundtrip PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(test_roundtrip PRIVATE sstv_encoder_static sstv_decoder_static m)
+
+add_executable(test_timing_correction test_timing_correction.cpp)
+target_include_directories(test_timing_correction PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/external)
+target_link_libraries(test_timing_correction PRIVATE sstv_decoder_static m)
+
 # Add test target
 add_test(NAME vis_codes COMMAND $<TARGET_FILE:test_vis_codes>)
 add_test(NAME encode_smoke COMMAND $<TARGET_FILE:test_encode_smoke>)
 add_test(NAME dsp_reference COMMAND $<TARGET_FILE:test_dsp_reference>)
 add_test(NAME decoder_basic COMMAND $<TARGET_FILE:test_decoder_basic>)
 add_test(NAME vis_decode COMMAND $<TARGET_FILE:test_vis_decode>)
+add_test(NAME roundtrip COMMAND $<TARGET_FILE:test_roundtrip>)
+set_tests_properties(roundtrip PROPERTIES TIMEOUT 300)
 add_test(NAME decode_images
     COMMAND $<TARGET_FILE:test_decode_images>
             ${CMAKE_CURRENT_SOURCE_DIR}/audio
@@ -54,6 +66,11 @@ add_test(NAME decode_modes
     COMMAND $<TARGET_FILE:test_decode_modes>
             ${CMAKE_CURRENT_SOURCE_DIR}/test_modes)
 set_tests_properties(decode_modes PROPERTIES TIMEOUT 3600)
+
+add_test(NAME timing_correction
+    COMMAND $<TARGET_FILE:test_timing_correction>
+            ${CMAKE_CURRENT_SOURCE_DIR}/audio)
+set_tests_properties(timing_correction PROPERTIES TIMEOUT 1800)
 
 # Optional: JSON test fixture validation
 if(NOT WIN32)

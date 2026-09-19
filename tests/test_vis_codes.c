@@ -3,9 +3,10 @@
  * 
  * This test program loads VIS test fixtures from JSON and validates:
  * 1. VIS code to binary conversion (LSB-first)
- * 2. Bit frequency mapping (1100/1300 Hz for data bits)
- * 3. Parity calculation (even parity)
- * 4. Complete VIS sequence timing (640ms total)
+ * 2. Bit frequency mapping (MMSSTV / SSTV Handbook: 1100 Hz = 1, 1300 Hz = 0)
+ * 3. Parity: bit 7 of the 8-bit code is the parity bit, so every valid
+ *    standard code has an even number of ones
+ * 4. Complete VIS sequence timing (910 ms total)
  */
 
 #include <stdio.h>
@@ -57,10 +58,10 @@ void vis_code_to_bits(uint8_t vis_code, uint8_t bits_lsb[8])
     }
 }
 
-/* Convert bit value to VIS frequency (1100=bit0, 1300=bit1) */
+/* Convert bit value to VIS frequency (MMSSTV: 1100 Hz = 1, 1300 Hz = 0) */
 int bit_to_frequency(int bit_value)
 {
-    return bit_value ? 1300 : 1100;
+    return bit_value ? 1100 : 1300;
 }
 
 /* Test single mode VIS code */
@@ -92,11 +93,10 @@ int test_vis_mode(struct vis_test_case *test, int test_index)
         }
         printf("\n");
         
-        /* Test parity */
+        /* Test parity (bit 7 is the parity bit; it is sent as data bit 7) */
         parity = calculate_parity(test->vis_code);
-        int parity_freq = bit_to_frequency(parity);
-        printf("  Parity: %d (even=%d) → frequency %d Hz\n", 
-               parity, (parity == 0), parity_freq);
+        printf("  Parity: %d (even=%d), parity bit (bit 7) = %d\n",
+               parity, (parity == 0), (test->vis_code >> 7) & 1);
         if (parity != test->parity) {
             printf("  ✗ Parity mismatch: got %d, expected %d\n", 
                    parity, test->parity);
@@ -104,9 +104,9 @@ int test_vis_mode(struct vis_test_case *test, int test_index)
         }
         
         /* VIS sequence timing */
-        int total_ms = 300 + 10 + 300 + 30 + (8 * 30) + 30 + 30;  /* 640ms */
+        int total_ms = 300 + 10 + 300 + 30 + (8 * 30) + 30;  /* 910ms */
         printf("  VIS sequence: Leader(1900/300ms) + Break(1200/10ms) + Leader(1900/300ms) + ");
-        printf("Start(1200/30ms) + Data(8×30ms) + Parity(30ms) + Stop(1200/30ms) = %dms\n", total_ms);
+        printf("Start(1200/30ms) + Data(8×30ms, incl. parity) + Stop(1200/30ms) = %dms\n", total_ms);
     } else {
         printf("  VIS sequence: SKIPPED (No VIS transmission)\n");
     }
@@ -166,12 +166,12 @@ struct test_suite* create_test_suite()
         {35, "Robot 24", 0x84, 0, "color", ""},
         {36, "B/W 8", 0x82, 0, "bw", ""},
         {37, "B/W 12", 0x86, 1, "bw", ""},
-        {38, "MP73-N", 0x00, 0, "color", "No VIS transmission"},
-        {39, "MP110-N", 0x00, 0, "color", "No VIS transmission"},
-        {40, "MP140-N", 0x00, 0, "color", "No VIS transmission"},
-        {41, "MC110-N", 0x00, 0, "color", "No VIS transmission"},
-        {42, "MC140-N", 0x00, 0, "color", "No VIS transmission"},
-        {43, "MC180-N", 0x00, 0, "color", "No VIS transmission"},
+        {38, "MP73-N", 0x00, 0, "color", "No VIS; MMSSTV sends an FSK N-VIS header"},
+        {39, "MP110-N", 0x00, 0, "color", "No VIS; MMSSTV sends an FSK N-VIS header"},
+        {40, "MP140-N", 0x00, 0, "color", "No VIS; MMSSTV sends an FSK N-VIS header"},
+        {41, "MC110-N", 0x00, 0, "color", "No VIS; MMSSTV sends an FSK N-VIS header"},
+        {42, "MC140-N", 0x00, 0, "color", "No VIS; MMSSTV sends an FSK N-VIS header"},
+        {43, "MC180-N", 0x00, 0, "color", "No VIS; MMSSTV sends an FSK N-VIS header"},
     };
     
     memcpy(suite->test_cases, cases, 43 * sizeof(struct vis_test_case));

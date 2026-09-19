@@ -119,27 +119,8 @@ static bool is_pd_mode(sstv_mode_t mode) {
     }
 }
 
-static bool is_mmsstv_vis_mode(sstv_mode_t mode) {
-    switch (mode) {
-        case SSTV_MP73:
-        case SSTV_MP115:
-        case SSTV_MP140:
-        case SSTV_MP175:
-        case SSTV_MR73:
-        case SSTV_MR90:
-        case SSTV_MR115:
-        case SSTV_MR140:
-        case SSTV_MR175:
-        case SSTV_ML180:
-        case SSTV_ML240:
-        case SSTV_ML280:
-        case SSTV_ML320:
-            return true;
-        default:
-            return false;
-    }
-}
-
+/* MMSSTV 16-bit VIS word (0x23 low byte = extended marker, high byte = mode) for
+ * the MR/MP/ML modes; 0 for modes that use the standard 8-bit VIS */
 static uint16_t get_mmsstv_vis_word(sstv_mode_t mode) {
     switch (mode) {
         case SSTV_MP73:  return 0x2523;
@@ -734,10 +715,8 @@ struct sstv_encoder_s {
     int complete;
 
     VCO vco;
-    VISEncoder vis;
-    int vis_active;
     int preamble_enabled;
-    int stage;
+    int stage;              /* 0 = header (preamble + VIS), 2 = image lines */
 
     size_t timed_line;
     size_t image_line;
@@ -749,32 +728,60 @@ struct sstv_encoder_s {
     double segment_fraction;
 };
 
+/* AVT digital header (MMSSTV TX): 32 frames of a 1900 Hz start pulse plus 16
+ * bits, each 9.7646 ms, followed by a 0.30514375 ms silent gap. */
+static const double AVT_BIT_MS = 9.7646;
+static const double AVT_GAP_MS = 0.30514375;
+
+/* Narrow-mode FSK header (MMSSTV sstv.h FSKSPACE/FSKGARD/FSKINTVAL) */
+static const double FSK_MARK_HZ = 1900.0;
+static const double FSK_SPACE_HZ = 2100.0;
+static const double FSK_GUARD_MS = 100.0;
+static const double FSK_BIT_MS = 22.0;
+
+/* MMSSTV N-VIS codes for the narrow modes (SSTV Handbook table 4.10) */
+static int get_narrow_nvis(sstv_mode_t mode) {
+    switch (mode) {
+        case SSTV_MN73:  return 0x02;
+        case SSTV_MN110: return 0x04;
+        case SSTV_MN140: return 0x05;
+        case SSTV_MC110: return 0x14;
+        case SSTV_MC140: return 0x15;
+        case SSTV_MC180: return 0x16;
+        default:         return -1;
+    }
+}
+
+static bool is_scottie_mode(sstv_mode_t mode) {
+    return mode == SSTV_SCOTTIE1 || mode == SSTV_SCOTTIE2 || mode == SSTV_SCOTTIEX;
+}
+
+/* Duration of everything MMSSTV sends after the preamble and before line 0 */
+static double get_vis_header_ms(sstv_mode_t mode) {
+    if (is_narrow_mode(mode)) {
+        /* 1900 Hz 300 ms, guard, 1900 Hz start, 4 FSK bytes of 6 bits */
+        return 300.0 + FSK_GUARD_MS + FSK_BIT_MS + 4 * 6 * FSK_BIT_MS;
+    }
+    if (mode == SSTV_AVT90) {
+        return 3 * vis_duration_ms(8) + 32 * 17 * AVT_BIT_MS + AVT_GAP_MS;
+    }
+    double ms = vis_duration_ms(get_mmsstv_vis_word(mode) ? 16 : 8);
+    if (is_scottie_mode(mode)) {
+        ms += 9.0;  /* extra 1200 Hz sync before the first Scottie line */
+    }
+    return ms;
+}
+
 static void recompute_total_samples(sstv_encoder_t *enc) {
     if (!enc) return;
-    enc->total_samples = 0;
-    if (enc->timing.line_count > 0 && enc->timing.line_ms > 0.0) {
-        double total_ms = enc->timing.line_ms * enc->timing.line_count;
-        enc->total_samples = (size_t)((total_ms / 1000.0) * enc->sample_rate);
-    } else {
-        const sstv_mode_info_t *info = sstv_get_mode_info(enc->mode);
-        if (info) {
-            enc->total_samples = (size_t)(info->duration_sec * enc->sample_rate);
-        }
-    }
+    double total_ms = enc->timing.line_ms * enc->timing.line_count;
     if (enc->vis_enabled) {
-        const sstv_mode_info_t *info = sstv_get_mode_info(enc->mode);
-        if (info && info->vis_code != 0x00) {
-            // Standard 8-bit VIS: 300ms leader + 10ms break + 300ms leader +
-            // 30ms start bit + 8×30ms data bits + 30ms stop bit = 910ms
-            // 16-bit VIS (MR/MP/ML): adds 8 more data bits + 2 parity bits = 1210ms
-            uint16_t vis_word = get_mmsstv_vis_word(enc->mode);
-            double vis_duration = (vis_word != 0x0000) ? 1.210 : 0.910;
-            enc->total_samples += (size_t)(vis_duration * enc->sample_rate);
-        }
+        total_ms += get_vis_header_ms(enc->mode);
     }
     if (enc->preamble_enabled) {
-        enc->total_samples += (size_t)(get_preamble_ms(enc->mode) * enc->sample_rate / 1000.0);
+        total_ms += get_preamble_ms(enc->mode);
     }
+    enc->total_samples = (size_t)(total_ms * enc->sample_rate / 1000.0);
 }
 
 static void push_segment_ms(sstv_encoder_t *enc, double freq, double ms) {
@@ -809,21 +816,70 @@ static void write_preamble(sstv_encoder_t *enc) {
     push_segment_ms(enc, 1500, 100.0);
 }
 
-static void write_mmsstv_vis(sstv_encoder_t *enc, uint16_t vis_word) {
-    if (!enc) return;
-    // 16-bit VIS: MMSSTV uses standard VIS leader/break/leader/start,
-    // then 16 data bits LSB-first at 30ms each, then stop bit 1200Hz 30ms.
-    push_segment_ms(enc, 1900, 300.0);
-    push_segment_ms(enc, 1200, 10.0);
-    push_segment_ms(enc, 1900, 300.0);
-    push_segment_ms(enc, 1200, 30.0);
-    for (int i = 0; i < 16; i++) {
-        /* MMSSTV: bit 1 = 1080 Hz, bit 0 = 1320 Hz */
-        double freq = (vis_word & 0x0001) ? 1080.0 : 1320.0;
-        push_segment_ms(enc, freq, 30.0);
-        vis_word >>= 1;
+static void write_vis(sstv_encoder_t *enc, unsigned short code, int nbits) {
+    VisTone tones[kVisMaxTones];
+    int n = vis_build_tones(code, nbits, tones);
+    for (int i = 0; i < n; i++) {
+        push_segment_ms(enc, tones[i].freq_hz, tones[i].ms);
     }
-    push_segment_ms(enc, 1200, 30.0);
+}
+
+/* MMSSTV CSSTVMOD::WriteFSK: 6 bits LSB-first, 1 = 1900 Hz, 0 = 2100 Hz */
+static void write_fsk(sstv_encoder_t *enc, int c) {
+    for (int i = 0; i < 6; i++) {
+        push_segment_ms(enc, (c & 0x01) ? FSK_MARK_HZ : FSK_SPACE_HZ, FSK_BIT_MS);
+        c >>= 1;
+    }
+}
+
+/* Everything MMSSTV sends between the preamble and line 0 (TMmsstv TX) */
+static void write_vis_header(sstv_encoder_t *enc) {
+    if (is_narrow_mode(enc->mode)) {
+        /* Narrow modes: FSK "N-VIS" header instead of VIS */
+        int d = get_narrow_nvis(enc->mode);
+        push_segment_ms(enc, 1900, 300.0);
+        push_segment_ms(enc, FSK_SPACE_HZ, FSK_GUARD_MS);
+        push_segment_ms(enc, FSK_MARK_HZ, FSK_BIT_MS);
+        write_fsk(enc, 0x2d);
+        write_fsk(enc, 0x15);
+        write_fsk(enc, d);
+        write_fsk(enc, d ^ 0x15);
+        return;
+    }
+
+    const sstv_mode_info_t *info = sstv_get_mode_info(enc->mode);
+    uint16_t vis_word = get_mmsstv_vis_word(enc->mode);
+    if (vis_word) {
+        write_vis(enc, vis_word, 16);   /* MR/MP/ML: 0x23 + mode byte */
+    } else if (enc->mode == SSTV_AVT90) {
+        /* AVT: VIS three times, then the 32-frame digital header that counts
+         * down to the first line (high byte = mode+count, low = its inverse) */
+        for (int i = 0; i < 3; i++) {
+            write_vis(enc, info->vis_code, 8);
+        }
+        unsigned int sd = 0x5fa0;
+        for (int i = 0; i < 32; i++) {
+            push_segment_ms(enc, 1900, AVT_BIT_MS);
+            unsigned int d = sd;
+            for (int n = 0; n < 16; n++) {
+                push_segment_ms(enc, (d & 0x8000) ? 1600 : 2200, AVT_BIT_MS);
+                d <<= 1;
+            }
+            sd = ((sd & 0xff00) - 0x0100) | ((sd & 0x00ff) + 0x0001);
+        }
+        push_segment_ms(enc, 0, AVT_GAP_MS);   /* silence */
+    } else {
+        write_vis(enc, info->vis_code, 8);
+    }
+
+    if (is_scottie_mode(enc->mode)) {
+        push_segment_ms(enc, 1200, 9.0);
+    }
+}
+
+/* MMSSTV VCO: base 1100 Hz, gain 1200 Hz (CSSTVMOD: SetFreeFreq(1100), SetGain(2300-1100)) */
+static double freq_to_vco_input(double freq_hz) {
+    return (freq_hz - 1100.0) / 1200.0;
 }
 
 static void write_line_r24(sstv_encoder_t *enc) {
@@ -878,10 +934,7 @@ static void write_line_r72(sstv_encoder_t *enc) {
     int width = (int)enc->image->width;
     std::vector<int> ry(width);
     std::vector<int> by(width);
-        push_segment_ms(enc, 1200, 9.0);
-        if (is_mmsstv_vis_mode(enc->mode)) {
-            write_mmsstv_vis(enc, get_mmsstv_vis_word(enc->mode));
-        }
+    push_segment_ms(enc, 1200, 9.0);
     push_segment_ms(enc, 1500, 3.0);
     for (int x = 0; x < width; x++) {
         int r, g, b, y, ryy, byy;
@@ -1216,18 +1269,6 @@ static bool generate_next_line_segments(sstv_encoder_t *enc) {
     enc->segment_index = 0;
     enc->segment_offset = 0;
 
-    if (enc->timed_line == 0) {
-        switch (enc->mode) {
-            case SSTV_SCOTTIE1:
-            case SSTV_SCOTTIE2:
-            case SSTV_SCOTTIEX:
-                push_segment_ms(enc, 1200, 9.0);
-                break;
-            default:
-                break;
-        }
-    }
-
     switch (enc->mode) {
         case SSTV_R24:
             write_line_r24(enc);
@@ -1467,10 +1508,9 @@ sstv_encoder_t* sstv_encoder_create(sstv_mode_t mode, double sample_rate) {
     compute_mode_timing(mode, sample_rate, &enc->timing);
 
     new (&enc->vco) VCO(sample_rate);
-    new (&enc->vis) VISEncoder();
-    enc->vco.setFreeFreq(1080.0);  /* MMSSTV base frequency */
-    enc->vco.setGain(1220.0);       /* Span to 2300 Hz (1080 + 1220) */
-    enc->vis_active = 0;
+    new (&enc->segments) std::vector<Segment>();
+    enc->vco.setFreeFreq(1100.0);  /* MMSSTV CSSTVMOD: SetFreeFreq(1100) */
+    enc->vco.setGain(1200.0);       /* MMSSTV CSSTVMOD: SetGain(2300 - 1100) */
     enc->preamble_enabled = 1;
     enc->stage = 0;
 
@@ -1489,7 +1529,7 @@ sstv_encoder_t* sstv_encoder_create(sstv_mode_t mode, double sample_rate) {
 void sstv_encoder_free(sstv_encoder_t *encoder) {
     if (encoder) {
         encoder->vco.~VCO();
-        encoder->vis.~VISEncoder();
+        encoder->segments.~vector();
         free(encoder);
     }
 }
@@ -1532,59 +1572,24 @@ size_t sstv_encoder_generate(sstv_encoder_t *encoder, float *samples, size_t max
         encoder->segment_index = 0;
         encoder->segment_offset = 0;
         encoder->timed_line = 0;
-        encoder->stage = encoder->preamble_enabled ? 0 : 1;
         encoder->image_line = 0;
         encoder->total_timed_lines = (size_t)encoder->timing.line_count;
 
-        const sstv_mode_info_t *info = sstv_get_mode_info(encoder->mode);
-        if (encoder->vis_enabled && info && info->vis_code != 0x00 && !is_narrow_mode(encoder->mode)) {
-            // Check if this is a 16-bit VIS mode (MR/MP/ML)
-            uint16_t vis_word = get_mmsstv_vis_word(encoder->mode);
-            if (vis_word != 0x0000) {
-                // 16-bit VIS for MR/MP/ML modes
-                encoder->vis.start_16bit(vis_word, encoder->sample_rate);
-            } else {
-                // Standard 8-bit VIS
-                encoder->vis.start(info->vis_code, encoder->sample_rate);
-            }
-            encoder->vis_active = 1;
-        } else {
-            encoder->vis_active = 0;
+        /* Stage 0: preamble and VIS header, queued as segments like MMSSTV's
+         * OutHEAD() + VIS output; then stage 2 generates the image lines. */
+        if (encoder->preamble_enabled) {
+            write_preamble(encoder);
         }
-        if (!encoder->vis_active && encoder->stage == 1) {
-            encoder->stage = 2;
+        if (encoder->vis_enabled) {
+            write_vis_header(encoder);
         }
+        encoder->stage = encoder->segments.empty() ? 2 : 0;
     }
 
     size_t produced = 0;
     while (produced < max_samples) {
-        if (encoder->stage == 0) {
-            if (encoder->segments.empty()) {
-                write_preamble(encoder);
-            }
-        } else if (encoder->stage == 1) {
-            if (encoder->vis_active) {
-                double fq = encoder->vis.get_frequency();
-                if (fq <= 0.0) {
-                    encoder->vis_active = 0;
-                    encoder->stage = 2;
-                    continue;
-                }
-                /* Normalize frequency to VCO input range: 1080-2300 Hz */
-                double norm = (fq - 1080.0) / 1220.0;
-                if (norm < 0.0) norm = 0.0;
-                if (norm > 1.0) norm = 1.0;
-                
-                samples[produced++] = (float)encoder->vco.process(norm);
-                encoder->samples_generated++;
-                continue;
-            }
-            encoder->stage = 2;
-            continue;
-        }
-
         if (encoder->stage == 0 && encoder->segment_index >= encoder->segments.size()) {
-            encoder->stage = encoder->vis_active ? 1 : 2;
+            encoder->stage = 2;
             encoder->segments.clear();
             encoder->segment_index = 0;
             encoder->segment_offset = 0;
@@ -1611,12 +1616,8 @@ size_t sstv_encoder_generate(sstv_encoder_t *encoder, float *samples, size_t max
 
         double fq = seg.freq;
         float out = 0.0f;
-        if (fq > 0.0) {
-            double norm = (fq - 1100.0) / 1200.0;
-            if (norm < 0.0) norm = 0.0;
-            if (norm > 1.0) norm = 1.0;
-            
-            out = (float)encoder->vco.process(norm);
+        if (fq > 0.0) {    /* frequency 0 = silence (MMSSTV CSSTVMOD::Do) */
+            out = (float)encoder->vco.process(freq_to_vco_input(fq));
         }
         samples[produced++] = out;
         encoder->samples_generated++;
@@ -1645,8 +1646,7 @@ void sstv_encoder_reset(sstv_encoder_t *encoder) {
         encoder->segment_fraction = 0.0;
         encoder->timed_line = 0;
         encoder->image_line = 0;
-        encoder->vis_active = 0;
-        encoder->stage = encoder->preamble_enabled ? 0 : 1;
+        encoder->stage = 0;   /* header is rebuilt on the next generate() */
     }
 }
 

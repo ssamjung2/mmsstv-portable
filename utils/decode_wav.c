@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include "sstv_decoder.h"
 
@@ -46,13 +47,26 @@ static int read_wav_header(FILE *fp, wav_info_t *info) {
     return 0;
 }
 
+static void write_ppm(const char *path, const sstv_image_t *image) {
+    FILE *out = fopen(path, "wb");
+    if (!out) {
+        fprintf(stderr, "Failed to open %s for writing: %s\n", path, strerror(errno));
+        return;
+    }
+
+    fprintf(out, "P6\n%u %u\n255\n", image->width, image->height);
+    fwrite(image->pixels, 1, (size_t)image->width * image->height * 3, out);
+    fclose(out);
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input.wav>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <input.wav> [output.ppm]\n", argv[0]);
         return 1;
     }
 
     const char *input_path = argv[1];
+    const char *output_path = (argc >= 3) ? argv[2] : "decoded_output.ppm";
     FILE *fp = fopen(input_path, "rb");
     if (!fp) {
         perror("fopen");
@@ -84,6 +98,7 @@ int main(int argc, char **argv) {
     sstv_decoder_set_vis_enabled(dec, 1);
 
     const size_t frame_samples = 2048;
+    int image_ready = 0;
     int16_t *pcm = (int16_t *)malloc(frame_samples * sizeof(int16_t));
     float *samples = (float *)malloc(frame_samples * sizeof(float));
     if (!pcm || !samples) {
@@ -96,47 +111,42 @@ int main(int argc, char **argv) {
     }
 
     size_t total = 0;
+    sstv_rx_status_t st = SSTV_RX_NEED_MORE;
     while (!feof(fp)) {
         size_t n = fread(pcm, sizeof(int16_t), frame_samples, fp);
         if (n == 0) break;
         for (size_t i = 0; i < n; i++) {
             samples[i] = (float)pcm[i];
         }
-        sstv_rx_status_t st = sstv_decoder_feed(dec, samples, n);
+        st = sstv_decoder_feed(dec, samples, n);
+        total += n;
+        if (st == SSTV_RX_IMAGE_READY || st == SSTV_RX_ERROR) break;
+    }
+    if (st == SSTV_RX_ERROR) {
+        fprintf(stderr, "Decoder error.\n");
+    } else {
+        /* End of input: flush a partially received last line, if any.
+         * finish() must only be called once the stream has ended. */
+        if (st != SSTV_RX_IMAGE_READY) st = sstv_decoder_finish(dec);
         if (st == SSTV_RX_IMAGE_READY) {
+            image_ready = 1;
             fprintf(stdout, "Image ready! Retrieving...\n");
-            
+
             /* Get the decoded image */
             sstv_image_t image;
             if (sstv_decoder_get_image(dec, &image) == 0) {
-                /* Save as PPM file */
-                const char *output_path = "decoded_output.ppm";
-                FILE *out = fopen(output_path, "wb");
-                if (out) {
-                    /* Write PPM header */
-                    fprintf(out, "P6\n%u %u\n255\n", image.width, image.height);
-                    
-                    /* Write pixel data */
-                    fwrite(image.pixels, 1, image.width * image.height * 3, out);
-                    fclose(out);
-                    
-                    fprintf(stdout, "Image saved to %s (%ux%u)\n", 
-                            output_path, image.width, image.height);
-                } else {
-                    fprintf(stderr, "Failed to open output file\n");
-                }
+                write_ppm(output_path, &image);
+                fprintf(stdout, "Image saved to %s (%ux%u)\n",
+                        output_path, image.width, image.height);
             } else {
                 fprintf(stderr, "Failed to retrieve image\n");
             }
-            break;
         }
-        if (st == SSTV_RX_ERROR) {
-            fprintf(stderr, "Decoder error.\n");
-            break;
-        }
-        total += n;
     }
 
+    if (!image_ready) {
+        fprintf(stdout, "No image was produced from this input.\n");
+    }
     fprintf(stdout, "Processed %zu samples at %u Hz.\n", total, info.sample_rate);
 
     free(pcm);

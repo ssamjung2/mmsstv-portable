@@ -198,6 +198,14 @@ if(BUILD_EXAMPLES)
         else()
             target_link_libraries(decode_wav_debug PRIVATE sstv_decoder_static)
         endif()
+
+        add_executable(evaluate_decoded_images utils/evaluate_decoded_images.cpp)
+        target_include_directories(evaluate_decoded_images PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/external)
+        if(BUILD_SHARED)
+            target_link_libraries(evaluate_decoded_images PRIVATE sstv_decoder)
+        else()
+            target_link_libraries(evaluate_decoded_images PRIVATE sstv_decoder_static)
+        endif()
     endif()
 
     # On Linux, example executables that call lrintf/etc. need explicit -lm.
