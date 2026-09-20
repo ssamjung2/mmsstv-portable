@@ -1,0 +1,5 @@
+# Defaults
+*                @admin
+
+# High security risk
+docs/*           @admin
