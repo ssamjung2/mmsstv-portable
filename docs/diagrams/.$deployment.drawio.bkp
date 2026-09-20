@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mxfile host="Electron" type="device" agent="mmsstv-portable docs">
+  <diagram id="Deployment-topologies" name="Deployment topologies">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="g_pi" value="Raspberry Pi (priority) — hosted core, headless or touchscreen" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#9e9e9e;dashed=1;verticalAlign=top;fontSize=13;fontStyle=1;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1080" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="pid" value="sstvd&#10;(owns audio, keying, rig)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#e8f0fe;strokeColor=#3367d6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="90" y="100" width="230" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="piui" value="ImGui front end&#10;on local touchscreen" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ffffff;strokeColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="90" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="picli" value="sstv CLI&#10;(ssh, scripts)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ffffff;strokeColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="160" width="200" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="pirem" value="Remote front end&#10;(laptop or phone over WebSocket)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ffffff;strokeColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="640" y="90" width="240" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="pihw" value="ALSA / PipeWire&#10;GPIO or serial PTT · hamlib" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#fff4e5;strokeColor=#b26b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="640" y="160" width="240" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="pinote" value="Local socket by default;&#10;network access opt-in,&#10;token + TLS." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="910" y="95" width="180" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_lx" value="Linux desktop — hosted core, local clients only" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#9e9e9e;dashed=1;verticalAlign=top;fontSize=13;fontStyle=1;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="1080" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="lxd" value="sstvd" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#e8f0fe;strokeColor=#3367d6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="90" y="350" width="230" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="lxui" value="Qt 6 / QML front end" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ffffff;strokeColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="340" width="200" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="lxcli" value="sstv CLI" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ffffff;strokeColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="400" width="200" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="lxhw" value="PipeWire · USB interface&#10;serial PTT · hamlib" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#fff4e5;strokeColor=#b26b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="640" y="350" width="240" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="lxnote" value="Same core, same API as the Pi;&#10;only the front end differs." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="910" y="350" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="g_ap" value="macOS and iOS — embedded core, no daemon (iOS forbids one)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#9e9e9e;dashed=1;verticalAlign=top;fontSize=13;fontStyle=1;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="40" y="490" width="1080" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="apapp" value="Flutter app" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#ffffff;strokeColor=#333333;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="90" y="550" width="200" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="apffi" value="C FFI boundary" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#e8f0fe;strokeColor=#3367d6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="330" y="550" width="160" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="apcore" value="libsstv_station&#10;(in-process, dynamic framework)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#e8f0fe;strokeColor=#3367d6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="530" y="545" width="260" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="aphw" value="CoreAudio · speaker + mic&#10;VOX keying" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#fff4e5;strokeColor=#b26b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="840" y="545" width="250" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="apnote" value="Rig control, when wanted, is a network rigctld on another machine.&#10;LGPL parts stay in dynamic frameworks so the app can be relinked (ADR-0006)." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="90" y="630" width="1000" height="45" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="piui" target="pid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="picli" target="pid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="WebSocket" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="pirem" target="pid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="pid" target="pihw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="lxui" target="lxd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="lxcli" target="lxd">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="lxd" target="lxhw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="apapp" target="apffi">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="apffi" target="apcore">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#555555;endArrow=block;endFill=1;fontSize=10;" edge="1" parent="1" source="apcore" target="aphw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
