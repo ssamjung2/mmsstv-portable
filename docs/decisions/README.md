@@ -16,7 +16,7 @@ recommendation waiting for a decision) or `Superseded by NNNN`.
 | [0002](0002-three-front-ends.md) | A different UI toolkit per platform family | Accepted |
 | [0003](0003-hamlib.md) | hamlib for rig control, keying kept separate | Accepted |
 | [0004](0004-audio-backend.md) | miniaudio behind our own audio abstraction | Proposed — [spike SP-1](../plans/feature-backlog.md#spikes-before-m0-closes) |
-| [0005](0005-api-protocol.md) | JSON-RPC control plane with binary data frames | Proposed — [spike SP-2](../plans/feature-backlog.md#spikes-before-m0-closes) |
+| [0005](0005-api-protocol.md) | NDJSON control plane, optional binary data channel | Accepted (SP-2) |
 | [0006](0006-licensing-and-app-store.md) | Keep LGPL parts dynamically linked and relinkable | Accepted |
 | [0007](0007-template-rendering.md) | Templates render in the core, not in front ends | Proposed |
 | [0008](0008-storage.md) | SQLite index, content-addressed image files, TOML settings | Proposed — [spike SP-3](../plans/feature-backlog.md#spikes-before-m0-closes) |

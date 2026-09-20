@@ -121,6 +121,7 @@ Deliberately, with the reason:
 
 | Open question | Why it is still open | When it must close |
 | --- | --- | --- |
+| SP-2's Raspberry Pi Zero 2 W measurement | Deferred 2026-09-20: the Zero is not set up. The transport decision is made and does not depend on it; the figure confirms headroom on the weakest target. Harness kept in `spikes/sp2-api-framing/` | Before M1 closes, since `N-1` and `N-11` are measured there |
 | Audio backend, API details, template renderer, storage shapes are **Proposed**, not Accepted ([ADRs 0004, 0005, 0007, 0008](../decisions/)) | They deserve a spike and your decision rather than my assertion | 0004, 0005, 0008 before M0 ends; 0007 before M2 starts |
 | Template rasteriser and text shaping choice | Hinges on iOS build size and CJK quality; needs measurement | Spike before M2 |
 | App Store legal review | Needs a lawyer, not an architect | Before M5 ends |

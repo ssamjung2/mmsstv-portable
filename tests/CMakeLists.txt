@@ -48,12 +48,28 @@ target_include_directories(test_timing_correction PRIVATE
     ${CMAKE_SOURCE_DIR}/external)
 target_link_libraries(test_timing_correction PRIVATE sstv_decoder_static m)
 
+# Station application tests (PocketSSTV core)
+if(BUILD_STATION)
+    add_executable(test_station_api test_station_api.cpp)
+    target_link_libraries(test_station_api PRIVATE sstv_station)
+
+    add_executable(fuzz_station_api fuzz_station_api.cpp)
+    target_link_libraries(fuzz_station_api PRIVATE sstv_station)
+endif()
+
 # Add test target
 add_test(NAME vis_codes COMMAND $<TARGET_FILE:test_vis_codes>)
 add_test(NAME encode_smoke COMMAND $<TARGET_FILE:test_encode_smoke>)
 add_test(NAME dsp_reference COMMAND $<TARGET_FILE:test_dsp_reference>)
 add_test(NAME decoder_basic COMMAND $<TARGET_FILE:test_decoder_basic>)
 add_test(NAME vis_decode COMMAND $<TARGET_FILE:test_vis_decode>)
+if(BUILD_STATION)
+    add_test(NAME station_api COMMAND $<TARGET_FILE:test_station_api>)
+    # Short seeded run for every push; the nightly job runs it far longer
+    # under sanitizers.
+    add_test(NAME station_fuzz COMMAND $<TARGET_FILE:fuzz_station_api> 1 20000)
+    set_tests_properties(station_fuzz PROPERTIES TIMEOUT 120)
+endif()
 add_test(NAME roundtrip COMMAND $<TARGET_FILE:test_roundtrip>)
 set_tests_properties(roundtrip PROPERTIES TIMEOUT 300)
 add_test(NAME decode_images

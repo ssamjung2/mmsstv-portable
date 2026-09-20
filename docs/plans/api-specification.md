@@ -17,11 +17,17 @@ the objects they carry are in [the data model](data-model.md).
 | Auth | File permissions (0600, owner only) | Bearer token, per-client, revocable | Process boundary |
 | Framing | Length-prefixed frames | WebSocket frames | Callbacks |
 
-Every frame carries a 5-byte header: `u32` length, `u8` type. Type `1` is a
-UTF-8 JSON-RPC message; type `2` is a binary payload whose first 8 bytes are a
-`u64` stream id issued when the subscription was created. Text and binary
-share one connection so ordering is preserved: line 42 never arrives before
-the "picture started" that explains it.
+The control plane is **newline-delimited JSON-RPC**: one message per line, so
+`nc -U` with `grep` or `jq` is a working client. Bulk data — waterfall
+columns, scan lines, picture tiles — travels on an **optional second channel**
+whose frames carry a `u32` length, a `u64` stream id and a `u64` timestamp.
+
+A client that never opens the data channel still receives every control event.
+Because the two planes are separate connections, ordering between them is
+**established by sequence number, not arrival order**: each bulk payload is
+announced on the control plane with a sequence number that the binary frame
+repeats. See [ADR-0005](../decisions/0005-api-protocol.md) for the measurements
+behind this.
 
 ## Versioning and skew
 

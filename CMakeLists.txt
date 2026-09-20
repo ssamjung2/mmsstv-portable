@@ -24,6 +24,11 @@ option(BUILD_STATIC "Build static library" ON)
 option(BUILD_TESTS "Build tests" OFF)
 option(BUILD_UTILS "Build standalone utility/diagnostic tools" OFF)
 option(BUILD_RX "Build RX decoder library" ON)
+option(BUILD_STATION "Build the PocketSSTV station core, daemon and CLI" ON)
+
+# Version of the station application, independent of the signal libraries
+# (ADR-0010: five components, one compatibility rule).
+set(POCKETSSTV_VERSION "0.1.0-dev")
 
 # C++11 for internal implementation
 set(CMAKE_CXX_STANDARD 11)
@@ -266,6 +271,12 @@ if(BUILD_UTILS)
             target_link_libraries(${_t} PRIVATE ${MATH_LIBRARY})
         endforeach()
     endif()
+endif()
+
+# PocketSSTV station application
+if(BUILD_STATION)
+    add_subdirectory(core)
+    add_subdirectory(apps)
 endif()
 
 # Installation

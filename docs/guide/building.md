@@ -9,6 +9,34 @@ cmake -S . -B build
 cmake --build build -j
 ```
 
+## The station application
+
+PocketSSTV — the daemon and its command-line client — builds from the same
+tree, with presets:
+
+```bash
+cmake --preset dev          # Debug, tests on
+cmake --build --preset dev -j
+```
+
+That produces `bin/pocketsstvd` (the daemon) and `bin/pocketsstv` (the CLI).
+To try them:
+
+```bash
+./bin/pocketsstvd --socket /tmp/pocketsstvd.sock &
+./bin/pocketsstv --socket /tmp/pocketsstvd.sock info
+```
+
+The control socket speaks newline-delimited JSON-RPC, so a shell is a
+first-class client:
+
+```bash
+printf '{"jsonrpc":"2.0","id":1,"method":"hello","params":{"api":"1.0"}}\n' \
+  | nc -U /tmp/pocketsstvd.sock
+```
+
+Set `BUILD_STATION=OFF` to build only the signal libraries.
+
 ## Options
 
 | Option | Default | Effect |
@@ -19,6 +47,7 @@ cmake --build build -j
 | `BUILD_EXAMPLES` | ON | Command-line tools, see [cli-tools.md](cli-tools.md) |
 | `BUILD_TESTS` | OFF | Test programs and CTest registration, see [the test suite](../../tests/README.md) |
 | `BUILD_UTILS` | OFF | Diagnostic programs in `utils/` (filter and VCO probes) |
+| `BUILD_STATION` | ON | The PocketSSTV station core, daemon and CLI |
 
 For example, a decoder-only build with tests:
 
