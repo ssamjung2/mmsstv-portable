@@ -31,3 +31,18 @@ install_manifest.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Reference copy of the SSTV Handbook (Martin Bruchanov, OK2MNM,
+# www.sstv-handbook.com). Not redistributable: keep locally, never commit.
+docs/standards/sstv-handbook.pdf
+docs/standards/sstv-handbook/
+docs/sstv-handbook.pdf
+docs/sstv-handbook/
+
+# Build output that was removed from history and must not return
+Makefile
+CTestTestfile.cmake
+Testing/
+sstv_encoder.pc
+debug_*.wav
+tests/decoded_images/
