@@ -11,7 +11,12 @@ explains why.
 | `external/` | Their own | `stb_image` is public domain / MIT, as stated in the files |
 
 Every source file carries an `SPDX-License-Identifier` so this is verifiable
-by tooling rather than by reading prose.
+by tooling rather than by reading prose, and CI fails a pull request that adds
+a file without one.
+
+`src/SpectralSubtractionDNR.{cpp,h}` is the exception to the directory rule: it
+is original work, not derived from MMSSTV, and nothing in `CMakeLists.txt`
+builds it today, so it carries the Apache-2.0 tag.
 
 ## What this means if you distribute a binary
 
@@ -20,18 +25,14 @@ shared library or framework, and provide what a user needs to rebuild them and
 relink your application. This constraint shapes the Apple build in particular
 ([ADR-0006](docs/decisions/0006-licensing-and-app-store.md)).
 
-Mixing the two is checked in CI: an LGPL object compiled into an Apache-2.0
-binary is a defect, not a nuance.
+What CI checks today is that every file declares a licence. Checking the
+stronger property — that no LGPL object is statically linked into an
+Apache-2.0 binary — needs the packaging work in M4 and is not automated yet.
 
 ## Licence texts
 
 - `LICENSE` — the LGPL v3 text, as inherited from MMSSTV.
-- `LICENSE-APACHE-2.0` — **not yet in the repository.** Add the canonical text
-  rather than a transcription:
-
-  ```sh
-  curl -o LICENSE-APACHE-2.0 https://www.apache.org/licenses/LICENSE-2.0.txt
-  ```
+- `LICENSE-APACHE-2.0` — the Apache License 2.0 text, covering the new code.
 
 ## Third-party material
 

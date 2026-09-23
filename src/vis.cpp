@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /*
  * VIS (Vertical Interval Signaling) Code Encoder
  * Based on MMSSTV by Makoto Mori (JE3HHT) and Nobuyuki Oba

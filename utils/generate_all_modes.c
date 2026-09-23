@@ -209,7 +209,8 @@ int generate_mode_wav(sstv_mode_t mode, const char *output_dir, unsigned int sam
 }
 
 int main(int argc, char *argv[]) {
-    const char *output_dir = argc > 1 ? argv[1] : "/Users/ssamjung/Desktop/WIP/mmsstv-portable/tests";
+    /* Relative by default, so a fresh clone works wherever it is checked out. */
+    const char *output_dir = argc > 1 ? argv[1] : "tests/test_modes";
     unsigned int sample_rate = argc > 2 ? atoi(argv[2]) : 48000;
     
     /* Create output directory */

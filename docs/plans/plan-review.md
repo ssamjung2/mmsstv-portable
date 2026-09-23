@@ -538,8 +538,8 @@ This will:
 - [tests/test_encode_smoke.c](../../tests/test_encode_smoke.c) — Encoder validation
 
 **Reference (MMSSTV):**
-- `/Users/ssamjung/Desktop/WIP/mmsstv/sstv.cpp` — Original CSSTVDEM::Do() (line ~1819)
-- `/Users/ssamjung/Desktop/WIP/mmsstv/sstv.h` — Original class definitions
+- `../mmsstv/sstv.cpp` — Original CSSTVDEM::Do() (line ~1819)
+- `../mmsstv/sstv.h` — Original class definitions
 
 ---
 

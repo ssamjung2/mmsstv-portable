@@ -12,7 +12,9 @@ ported from **MMSSTV** by Makoto Mori (JE3HHT) and Nobuyuki Oba.
   sample-clock mismatches do not slant the image.
 
 The reference for both is the original MMSSTV source and the
-[SSTV Handbook](docs/standards/sstv-handbook.pdf). What the signal contains is
+[SSTV Handbook](https://www.sstv-handbook.com) (*Image Communication on
+Short Waves* by Martin Bruchanov, OK2MNM — cited, not redistributed; download
+your own copy). What the signal contains is
 described in [the signal format reference](docs/standards/sstv-signal-format.md);
 where this code is compared with MMSSTV line by line, see
 [the MMSSTV source map](docs/specs/mmsstv-source-map.md).
@@ -119,9 +121,25 @@ by kind: [standards](docs/standards/) for what SSTV is,
 open, and [archive](docs/archive/) for historical records.
 [CHANGELOG.md](CHANGELOG.md) lists what changed and when.
 
+## Contributing
+
+Bug reports, mode-compatibility results from real contacts, and patches are
+welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the build, the tests a
+change is expected to pass, and the sign-off requirement.
+[SECURITY.md](SECURITY.md) explains how to report a vulnerability privately —
+including anything that could make a station transmit when it should not.
+
 ## License and credits
 
-LGPL v3 (see `LICENSE`), as derived from MMSSTV.
+Two licences, by module ([LICENSING.md](LICENSING.md) explains the split):
+
+- `src/`, `include/` — the encoder and decoder — are **LGPL v3** (`LICENSE`),
+  inherited from MMSSTV.
+- `core/`, `apps/` — the PocketSSTV station code — are **Apache-2.0**
+  (`LICENSE-APACHE-2.0`).
+
+Every source file carries an SPDX identifier, so a file's licence travels with
+the file.
 
 Copyright (C) 2000-2013 Makoto Mori (JE3HHT), Nobuyuki Oba (original MMSSTV).
 Copyright (C) 2026 (library port).

@@ -208,9 +208,11 @@ int main(int argc, char **argv) {
     printf("SSTV Encoder - Real Image Test Driver\n");
     printf("======================================\n\n");
     
-    // Default paths relative to workspace
-    const char *color_bars = "/Users/ssamjung/Desktop/WIP/PiSSTVpp2/tests/images/alt_color_bars_320x256.gif";
-    const char *test_panel = "/Users/ssamjung/Desktop/WIP/PiSSTVpp2/tests/images/alt2_test_panel_640x480.jpg";
+    /* These images are not in this repository: pass your own on the command
+     * line. The defaults name files from a separate local checkout and exist
+     * only as a reminder of the expected shapes. */
+    const char *color_bars = "images/color_bars_320x256.gif";
+    const char *test_panel = "images/test_panel_640x480.jpg";
     
     uint32_t sample_rate = 48000;
     

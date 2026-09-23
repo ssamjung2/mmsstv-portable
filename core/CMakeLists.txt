@@ -7,6 +7,8 @@
 add_library(sstv_station STATIC
     src/json.cpp
     src/api.cpp
+    src/audio.cpp
+    src/session.cpp
 )
 
 target_include_directories(sstv_station PUBLIC
@@ -17,6 +19,9 @@ target_include_directories(sstv_station PUBLIC
 # The core is C++17 (ADR/engineering practices); the signal libraries stay at
 # C++11 and are not disturbed by this.
 target_compile_features(sstv_station PUBLIC cxx_std_17)
+
+# The session drives the decoder; the encoder header supplies mode names.
+target_link_libraries(sstv_station PUBLIC sstv_decoder_static)
 
 target_compile_definitions(sstv_station PUBLIC
     POCKETSSTV_VERSION="${POCKETSSTV_VERSION}"

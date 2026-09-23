@@ -40,8 +40,16 @@ public:
     Value(const char *s) : type_(Type::String), str_(s ? s : "") {}
     Value(std::string s) : type_(Type::String), str_(std::move(s)) {}
 
-    static Value array() { Value v; v.type_ = Type::Array; return v; }
-    static Value object() { Value v; v.type_ = Type::Object; return v; }
+    static Value array() {
+        Value v;
+        v.type_ = Type::Array;
+        return v;
+    }
+    static Value object() {
+        Value v;
+        v.type_ = Type::Object;
+        return v;
+    }
 
     Type type() const { return type_; }
     bool is_null() const { return type_ == Type::Null; }

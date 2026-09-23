@@ -55,6 +55,13 @@ if(BUILD_STATION)
 
     add_executable(fuzz_station_api fuzz_station_api.cpp)
     target_link_libraries(fuzz_station_api PRIVATE sstv_station)
+
+    add_executable(test_session test_session.cpp)
+    target_link_libraries(test_session PRIVATE sstv_station)
+
+    # Exercises the daemon binary itself: lifecycle, not logic.
+    add_executable(test_daemon_socket test_daemon_socket.cpp)
+    add_dependencies(test_daemon_socket pocketsstvd)
 endif()
 
 # Add test target
@@ -69,6 +76,13 @@ if(BUILD_STATION)
     # under sanitizers.
     add_test(NAME station_fuzz COMMAND $<TARGET_FILE:fuzz_station_api> 1 20000)
     set_tests_properties(station_fuzz PROPERTIES TIMEOUT 120)
+    add_test(NAME session
+             COMMAND $<TARGET_FILE:test_session> ${CMAKE_CURRENT_SOURCE_DIR}/audio)
+    set_tests_properties(session PROPERTIES TIMEOUT 300)
+    add_test(NAME daemon_socket
+             COMMAND $<TARGET_FILE:test_daemon_socket> $<TARGET_FILE:pocketsstvd>
+                     ${CMAKE_CURRENT_SOURCE_DIR}/audio/alt5_test_panel_r36.wav)
+    set_tests_properties(daemon_socket PROPERTIES TIMEOUT 120)
 endif()
 add_test(NAME roundtrip COMMAND $<TARGET_FILE:test_roundtrip>)
 set_tests_properties(roundtrip PROPERTIES TIMEOUT 300)

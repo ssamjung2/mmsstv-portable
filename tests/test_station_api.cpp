@@ -139,6 +139,17 @@ void test_negotiation() {
         check(error_kind(api.handle_line(hello_line("banana"))) == "invalid_argument",
               "a malformed version is rejected");
     }
+    {
+        /* A lax parser would accept these: sscanf stops at the first thing it
+         * cannot read and reports success for what it managed. */
+        const char *bad[] = {"1.0garbage", "1", "1.", ".0", "1.0.0", "-1.0",
+                             "99999999999999999999.0", " 1.0"};
+        for (const char *v : bad) {
+            station::Api api;
+            check(error_kind(api.handle_line(hello_line(v))) == "invalid_argument",
+                  std::string("rejects malformed version \"") + v + "\"");
+        }
+    }
 }
 
 void test_dispatch() {

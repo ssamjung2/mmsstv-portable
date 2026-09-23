@@ -39,9 +39,14 @@ docs/standards/sstv-handbook/
 docs/sstv-handbook.pdf
 docs/sstv-handbook/
 
-# Build output that was removed from history and must not return
+# Build output that was removed from history and must not return.
+# Unanchored, so a generated copy in any subdirectory is ignored too — the
+# first pass only caught the ones at the root.
 Makefile
 CTestTestfile.cmake
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
 Testing/
 sstv_encoder.pc
 debug_*.wav

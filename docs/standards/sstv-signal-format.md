@@ -5,7 +5,7 @@ headers and scan-line structure. This is the protocol reference. How this
 library generates it is in [the encoder specification](../specs/encoder.md);
 how it reads it back is in [the decoder specification](../specs/decoder.md).
 
-Two authorities: the SSTV Handbook ([sstv-handbook.pdf](sstv-handbook.pdf))
+Two authorities: the SSTV Handbook ([sstv-handbook.com](https://www.sstv-handbook.com))
 and the MMSSTV source, which is what the amateur SSTV world actually
 interoperates with. **Where they differ, this document follows MMSSTV** and
 says so, because MMSSTV's behaviour is what this library implements and what

@@ -27,6 +27,24 @@ To try them:
 ./bin/pocketsstv --socket /tmp/pocketsstvd.sock info
 ```
 
+Decode a recording through the daemon, with no sound card involved:
+
+```bash
+./bin/pocketsstv --socket /tmp/pocketsstvd.sock feed tests/audio/alt5_test_panel_martin1.wav
+```
+
+```text
+playing tests/audio/alt5_test_panel_martin1.wav (22050 Hz, 116.0 s of audio)
+session.state          Idle -> Hunting (startRx)
+session.state          Hunting -> Receiving (header detected)
+rx.pictureStarted      Martin 1, 256 lines  [p_1789922769_0000]
+rx.pictureComplete     complete  Martin 1  256/256 lines  320x256
+audio.sourceEnded      source exhausted
+```
+
+Other commands: `status` for what the session is doing, `monitor` to follow
+events, `--json` on any of them, `--verbose` to include per-line progress.
+
 The control socket speaks newline-delimited JSON-RPC, so a shell is a
 first-class client:
 

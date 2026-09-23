@@ -1,5 +1,5 @@
 > **Source note (2026-09-18):** verbatim excerpt from the SSTV Handbook
-> (docs/sstv-handbook.pdf, §4.2.5), kept as reference. This library, like
+> (SSTV Handbook §4.2.5, <https://www.sstv-handbook.com>), kept as reference. This library, like
 > MMSSTV, implements only **AVT 90** in its normal variant (no narrow or QRM
 > variants): 320×240 (the Handbook lists 256×240), R–G–B at 125 ms per
 > channel with no line sync, VIS 0x44 sent three times, then the 32-frame

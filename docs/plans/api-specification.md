@@ -106,6 +106,16 @@ Grouped by noun. Every method returns `{ok: true, ...}` or a structured error.
 | `system.info` | — | Versions, platform, uptime, device and rig summary |
 | `system.diagnostics` | `redact?` | Diagnostics bundle path (`R-OPS-2`) |
 
+### Development
+
+Selected by configuration, not by a build flag, so a shipping binary can
+reproduce a problem from an operator's own recording
+([ADR-0011](../decisions/0011-simulation-first-development.md)).
+
+| Method | Parameters | Returns / effect |
+| --- | --- | --- |
+| `dev.feed` | `file` | Plays a 16-bit mono WAV through the fake audio device, as though it had arrived from the radio. Returns the sample rate and length |
+
 ## Events
 
 Clients subscribe with `events.subscribe {topics, rates?}`. Every event has a
@@ -124,6 +134,7 @@ anything.
 | `ptt.state` | Asserted, released, method, `confirmed` (false when the backend cannot read the line back) | On change |
 | `audio.level` | Input and output peak and RMS, clipping | 10 Hz |
 | `audio.deviceLost` / `audio.deviceRestored` | Device id, reason | On change |
+| `audio.sourceEnded` | Reason | When a finite source, such as a recording, runs out |
 | `rig.state` | Frequency, mode, connection | On change, ≤2 Hz |
 | `fault.raised` / `fault.cleared` | Code, detail, remediation | On change |
 | `log.changed`, `library.changed`, `config.changed` | Ids or keys affected | On change |
@@ -131,11 +142,17 @@ anything.
 ### Back-pressure
 
 High-rate topics (`rx.line`, `waterfall.column`, `audio.level`) are **lossy by
-design**. Each subscription has a bounded queue; when it fills, the oldest
-frames are dropped and a `dropped` counter is included in the next event. A
-slow phone on a weak Wi-Fi link must never stall the decoder. Low-rate topics
-(state, faults, completion) are **never dropped**: if their queue fills, the
-client is disconnected, because a client that missed a fault is dangerous.
+design**. Each subscription has a bounded queue; past a soft limit those events
+are dropped and counted, and the count rides along on the next event the client
+does receive, as a `dropped` field. A slow phone on a weak Wi-Fi link must
+never stall the decoder. Low-rate topics (state, faults, completion) are
+**never dropped**: past a hard limit the client is disconnected instead,
+because a client that missed a fault is dangerous.
+
+This is implemented and tested: with a subscriber that stops reading entirely,
+a decode still completes, and the subscriber is told how many high-rate events
+it missed. The client sockets are non-blocking for the same reason — a
+blocking write to a full socket freezes the whole station.
 
 ## Errors
 
