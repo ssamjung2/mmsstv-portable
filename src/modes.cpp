@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
 /*
  * SSTV Mode Definitions and Utilities
  * Based on MMSSTV by Makoto Mori (JE3HHT) and Nobuyuki Oba

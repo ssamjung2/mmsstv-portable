@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // SpectralSubtractionDNR.h
 // Simple spectral subtraction DNR module for SSTV DSP pipeline
 // (C) 2026

@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Pull-request pipeline. The budget is 15 minutes: heavy suites (the 43-mode
+# sweep, soak, hardware-in-the-loop) belong in a nightly job, per
+# docs/plans/test-strategy.md.
+#
+# Third-party actions are pinned to full commit SHAs, not tags: a tag can be
+# moved to point at different code, and a workflow runs with repository
+# access. Dependabot (.github/dependabot.yml) updates the pins and rewrites
+# the trailing version comment.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: jobs that need more must ask for it explicitly.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # arm64 matters: both Raspberry Pi targets are arm64, and emulated
+        # timing hides real-time bugs.
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Nothing here pushes, so the token should not outlive the step.
+          persist-credentials: false
+
+      - name: Configure
+        run: cmake --preset dev
+
+      - name: Build
+        run: cmake --build --preset dev -j
+
+      - name: Test
+        # decode_modes needs tests/test_modes/, 571 MB of generated audio that
+        # is deliberately not in the repository. It runs nightly, where the
+        # fixtures are generated first.
+        working-directory: build/dev/tests
+        run: ctest --output-on-failure -E "decode_modes"
+
+  lint:
+    name: format and static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Nothing here pushes, so the token should not outlive the step.
+          persist-credentials: false
+
+      - name: Install tooling
+        run: sudo apt-get update && sudo apt-get install -y clang-format clang-tidy
+
+      - name: clang-format
+        # The parentheses are load-bearing: -a binds tighter than -o, so
+        # without them -exec would attach to the *.h clause alone and no .cpp
+        # file would ever be checked.
+        run: |
+          find core apps \( -name '*.cpp' -o -name '*.h' \) \
+            -exec clang-format --dry-run --Werror {} +
+
+      - name: Configure (for the compile database)
+        run: cmake --preset dev -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: clang-tidy
+        # The station code is held to zero findings; src/ is older C++11 and
+        # has not had its pass yet (see .clang-tidy). The committed .clang-tidy
+        # decides what is an error -- no --warnings-as-errors override here, so
+        # the gate and the file cannot drift apart.
+        #
+        # A missing standard header surfaces as clang-diagnostic-error and
+        # fails this step, which is deliberate: clang-tidy that cannot find
+        # <cstddef> still emits confident bugprone-* findings, and they are
+        # all noise.
+        run: clang-tidy -p build/dev core/src/*.cpp apps/*/main.cpp
+
+  sanitizers:
+    name: address and undefined behaviour
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Nothing here pushes, so the token should not outlive the step.
+          persist-credentials: false
+
+      - name: Build and run under sanitizers
+        run: |
+          cmake -S . -B build/asan -DBUILD_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          cmake --build build/asan -j
+          cd build/asan/tests && ctest --output-on-failure -E "decode_modes|decode_images"
+
+  licence-boundary:
+    name: licence boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Nothing here pushes, so the token should not outlive the step.
+          persist-credentials: false
+
+      - name: Every source file declares a licence
+        # LGPL and Apache-2.0 code live side by side (LICENSING.md); a file
+        # without an SPDX tag is how that boundary gets lost once the code is
+        # public and people start copying single files out of it.
+        run: |
+          missing=0
+          for f in $(git ls-files 'src/*' 'include/*' 'core/**/*.h' 'core/**/*.cpp' 'apps/**/*.cpp'); do
+            if ! grep -q "SPDX-License-Identifier" "$f"; then
+              echo "missing SPDX identifier: $f"
+              missing=1
+            fi
+          done
+          exit $missing

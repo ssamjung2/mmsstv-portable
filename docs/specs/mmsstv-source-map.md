@@ -8,8 +8,8 @@ how faithfully it was ported. The MMSSTV source (LGPL) is expected at
 iconv -c -f CP932 -t UTF-8 ../mmsstv/sstv.cpp > /tmp/sstv.cpp
 ```
 
-Line numbers refer to that MMSSTV tree. Together with the SSTV Handbook
-(`docs/sstv-handbook.pdf`), MMSSTV is the reference for this project.
+Line numbers refer to that MMSSTV tree. Together with the [SSTV Handbook](https://www.sstv-handbook.com), MMSSTV is the reference for this
+project. The handbook is cited, not redistributed: download your own copy.
 
 ## Transmitter
 

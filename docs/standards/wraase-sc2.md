@@ -1,5 +1,5 @@
 > **Source note (2026-09-18):** verbatim excerpt from the SSTV Handbook
-> (docs/sstv-handbook.pdf, §4.2.6), kept as reference. This library follows
+> (SSTV Handbook §4.2.6, <https://www.sstv-handbook.com>), kept as reference. This library follows
 > MMSSTV, which implements **SC2 180, SC2 120 and SC2 60** (no SC-2 30), all
 > 320×256, with R, G and B sent for **equal** times per line (235 / 156.5 /
 > 78.128 ms each) after a ~5.5 ms sync and 0.5 ms porch. For SC-2 120 and

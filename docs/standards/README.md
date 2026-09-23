@@ -10,7 +10,7 @@ written, and they change only if the standards do.
 | [avt.md](avt.md) | SSTV Handbook text on the AVT modes, with a note on what this library implements |
 | [wraase-sc2.md](wraase-sc2.md) | SSTV Handbook text on the Wraase SC-2 modes, with a note on how MMSSTV's timing differs |
 | [s-units-and-dbm.md](s-units-and-dbm.md) | S-meter units, dBm, and the signal levels used when testing under HF conditions |
-| [sstv-handbook.pdf](sstv-handbook.pdf) | The SSTV Handbook itself. Its LaTeX source is in `sstv-handbook/` |
+| [The SSTV Handbook](https://www.sstv-handbook.com) | *Image Communication on Short Waves* by Martin Bruchanov, OK2MNM. **Not in this repository** — it carries no licence permitting redistribution. Download it from the author's site; the build and tests do not need it |
 
 ## The two authorities
 

@@ -1,0 +1,10 @@
+# Style for the PocketSSTV station code. Matches the surrounding project:
+# four spaces, 100 columns. Applied to core/ and apps/ only; the older C
+# sources in src/ are left alone so formatting churn does not obscure history.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+PointerAlignment: Right

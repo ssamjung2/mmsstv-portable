@@ -1,0 +1,31 @@
+# Static analysis for the PocketSSTV station code (core/, apps/).
+#
+# The signal libraries in src/ predate this and are not held to it yet; they
+# are C++11 and would need their own pass.
+#
+# Exclusions, with reasons rather than silence:
+#   cert-err33-c            - demands checking the return of every printf to a
+#                             console. Real output failures surface elsewhere;
+#                             enforcing it would bury genuine findings.
+#   *-easily-swappable-parameters - fires on any two adjacent same-typed
+#                             arguments. Too noisy to be useful here.
+#   *-magic-numbers         - JSON-RPC codes and byte offsets are clearer
+#                             inline, next to the comment explaining them.
+#   performance-enum-size   - saving three bytes per enum is not worth the
+#                             explicit base type on every declaration.
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  performance-*,
+  portability-*,
+  readability-misleading-indentation,
+  readability-redundant-*,
+  -cert-err33-c,
+  -bugprone-easily-swappable-parameters,
+  -readability-magic-numbers,
+  -performance-enum-size,
+  -cppcoreguidelines-avoid-magic-numbers
+WarningsAsErrors: 'bugprone-*,clang-analyzer-*'
+HeaderFilterRegex: 'core/include/station/.*'

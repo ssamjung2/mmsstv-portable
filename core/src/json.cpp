@@ -6,24 +6,44 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <utility>
 
 namespace station {
 namespace json {
 
 namespace {
-const Value kNull;
+/* A function-local static rather than a namespace-scope object: initialised on
+ * first use, so nothing runs before main, and thread-safe since C++11. */
+const Value &null_value() {
+    static const Value v;
+    return v;
+}
 
 void dump_string(const std::string &s, std::string *out) {
     out->push_back('"');
     for (unsigned char c : s) {
         switch (c) {
-        case '"':  *out += "\\\""; break;
-        case '\\': *out += "\\\\"; break;
-        case '\n': *out += "\\n";  break;
-        case '\r': *out += "\\r";  break;
-        case '\t': *out += "\\t";  break;
-        case '\b': *out += "\\b";  break;
-        case '\f': *out += "\\f";  break;
+        case '"':
+            *out += "\\\"";
+            break;
+        case '\\':
+            *out += "\\\\";
+            break;
+        case '\n':
+            *out += "\\n";
+            break;
+        case '\r':
+            *out += "\\r";
+            break;
+        case '\t':
+            *out += "\\t";
+            break;
+        case '\b':
+            *out += "\\b";
+            break;
+        case '\f':
+            *out += "\\f";
+            break;
         default:
             if (c < 0x20) {
                 /* Control characters must be escaped; anything else (including
@@ -62,9 +82,15 @@ public:
 
     bool parse(Value *out, std::string *error) {
         skip_ws();
-        if (!parse_value(out, 0)) { *error = err_; return false; }
+        if (!parse_value(out, 0)) {
+            *error = err_;
+            return false;
+        }
         skip_ws();
-        if (pos_ != s_.size()) { *error = "trailing content after JSON value"; return false; }
+        if (pos_ != s_.size()) {
+            *error = "trailing content after JSON value";
+            return false;
+        }
         return true;
     }
 
@@ -73,12 +99,17 @@ private:
     size_t pos_ = 0;
     std::string err_;
 
-    bool fail(const char *what) { if (err_.empty()) err_ = what; return false; }
+    bool fail(const char *what) {
+        if (err_.empty()) err_ = what;
+        return false;
+    }
     void skip_ws() {
         while (pos_ < s_.size()) {
             char c = s_[pos_];
-            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') pos_++;
-            else break;
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
+                pos_++;
+            else
+                break;
         }
     }
     bool literal(const char *lit) {
@@ -92,13 +123,26 @@ private:
         if (depth > kMaxDepth) return fail("nesting too deep");
         if (pos_ >= s_.size()) return fail("unexpected end of input");
         switch (s_[pos_]) {
-        case 'n': if (!literal("null")) return false;  *out = Value();      return true;
-        case 't': if (!literal("true")) return false;  *out = Value(true);  return true;
-        case 'f': if (!literal("false")) return false; *out = Value(false); return true;
-        case '"': return parse_string(out);
-        case '[': return parse_array(out, depth);
-        case '{': return parse_object(out, depth);
-        default:  return parse_number(out);
+        case 'n':
+            if (!literal("null")) return false;
+            *out = Value();
+            return true;
+        case 't':
+            if (!literal("true")) return false;
+            *out = Value(true);
+            return true;
+        case 'f':
+            if (!literal("false")) return false;
+            *out = Value(false);
+            return true;
+        case '"':
+            return parse_string(out);
+        case '[':
+            return parse_array(out, depth);
+        case '{':
+            return parse_object(out, depth);
+        default:
+            return parse_number(out);
         }
     }
 
@@ -111,40 +155,62 @@ private:
             unsigned char c = static_cast<unsigned char>(s_[pos_++]);
             if (c == '"') break;
             if (c < 0x20) return fail("control character in string");
-            if (c != '\\') { result.push_back(static_cast<char>(c)); continue; }
+            if (c != '\\') {
+                result.push_back(static_cast<char>(c));
+                continue;
+            }
             if (pos_ >= s_.size()) return fail("unterminated escape");
             char e = s_[pos_++];
             switch (e) {
-            case '"':  result.push_back('"');  break;
-            case '\\': result.push_back('\\'); break;
-            case '/':  result.push_back('/');  break;
-            case 'n':  result.push_back('\n'); break;
-            case 'r':  result.push_back('\r'); break;
-            case 't':  result.push_back('\t'); break;
-            case 'b':  result.push_back('\b'); break;
-            case 'f':  result.push_back('\f'); break;
+            case '"':
+                result.push_back('"');
+                break;
+            case '\\':
+                result.push_back('\\');
+                break;
+            case '/':
+                result.push_back('/');
+                break;
+            case 'n':
+                result.push_back('\n');
+                break;
+            case 'r':
+                result.push_back('\r');
+                break;
+            case 't':
+                result.push_back('\t');
+                break;
+            case 'b':
+                result.push_back('\b');
+                break;
+            case 'f':
+                result.push_back('\f');
+                break;
             case 'u': {
                 /* \uXXXX, encoded as UTF-8. Surrogate pairs are joined; a lone
                  * surrogate becomes U+FFFD rather than invalid UTF-8, because
                  * callers downstream assume well-formed text. */
-                unsigned cp;
+                unsigned cp = 0;
                 if (!hex4(&cp)) return false;
-                if (cp >= 0xD800 && cp <= 0xDBFF) {
-                    unsigned lo;
+                if (cp >= 0xD800u && cp <= 0xDBFFu) {
+                    unsigned lo = 0;
                     if (pos_ + 1 < s_.size() && s_[pos_] == '\\' && s_[pos_ + 1] == 'u') {
                         pos_ += 2;
                         if (!hex4(&lo)) return false;
-                        if (lo >= 0xDC00 && lo <= 0xDFFF)
-                            cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
-                        else cp = 0xFFFD;
-                    } else cp = 0xFFFD;
-                } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
-                    cp = 0xFFFD;
+                        if (lo >= 0xDC00u && lo <= 0xDFFFu)
+                            cp = 0x10000u + ((cp - 0xD800u) << 10u) + (lo - 0xDC00u);
+                        else
+                            cp = 0xFFFDu;
+                    } else
+                        cp = 0xFFFDu;
+                } else if (cp >= 0xDC00u && cp <= 0xDFFFu) {
+                    cp = 0xFFFDu;
                 }
                 append_utf8(cp, &result);
                 break;
             }
-            default: return fail("invalid escape");
+            default:
+                return fail("invalid escape");
             }
         }
         *out = Value(std::move(result));
@@ -156,31 +222,37 @@ private:
         unsigned v = 0;
         for (int i = 0; i < 4; i++) {
             char c = s_[pos_++];
-            v <<= 4;
-            if (c >= '0' && c <= '9') v |= static_cast<unsigned>(c - '0');
-            else if (c >= 'a' && c <= 'f') v |= static_cast<unsigned>(c - 'a' + 10);
-            else if (c >= 'A' && c <= 'F') v |= static_cast<unsigned>(c - 'A' + 10);
-            else return fail("invalid hex in \\u escape");
+            v <<= 4u;
+            if (c >= '0' && c <= '9')
+                v |= static_cast<unsigned>(c - '0');
+            else if (c >= 'a' && c <= 'f')
+                v |= static_cast<unsigned>(c - 'a' + 10);
+            else if (c >= 'A' && c <= 'F')
+                v |= static_cast<unsigned>(c - 'A' + 10);
+            else
+                return fail("invalid hex in \\u escape");
         }
         *out = v;
         return true;
     }
 
     static void append_utf8(unsigned cp, std::string *out) {
-        if (cp < 0x80) {
+        /* Unsigned literals throughout: mixing signed constants into bit
+         * manipulation is how encoders acquire sign-extension bugs. */
+        if (cp < 0x80u) {
             out->push_back(static_cast<char>(cp));
-        } else if (cp < 0x800) {
-            out->push_back(static_cast<char>(0xC0 | (cp >> 6)));
-            out->push_back(static_cast<char>(0x80 | (cp & 0x3F)));
-        } else if (cp < 0x10000) {
-            out->push_back(static_cast<char>(0xE0 | (cp >> 12)));
-            out->push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-            out->push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        } else if (cp < 0x800u) {
+            out->push_back(static_cast<char>(0xC0u | (cp >> 6u)));
+            out->push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
+        } else if (cp < 0x10000u) {
+            out->push_back(static_cast<char>(0xE0u | (cp >> 12u)));
+            out->push_back(static_cast<char>(0x80u | ((cp >> 6u) & 0x3Fu)));
+            out->push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
         } else {
-            out->push_back(static_cast<char>(0xF0 | (cp >> 18)));
-            out->push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
-            out->push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-            out->push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+            out->push_back(static_cast<char>(0xF0u | (cp >> 18u)));
+            out->push_back(static_cast<char>(0x80u | ((cp >> 12u) & 0x3Fu)));
+            out->push_back(static_cast<char>(0x80u | ((cp >> 6u) & 0x3Fu)));
+            out->push_back(static_cast<char>(0x80u | (cp & 0x3Fu)));
         }
     }
 
@@ -188,16 +260,25 @@ private:
         size_t start = pos_;
         if (pos_ < s_.size() && (s_[pos_] == '-' || s_[pos_] == '+')) pos_++;
         bool digits = false;
-        while (pos_ < s_.size() && std::isdigit(static_cast<unsigned char>(s_[pos_]))) { pos_++; digits = true; }
+        while (pos_ < s_.size() && std::isdigit(static_cast<unsigned char>(s_[pos_]))) {
+            pos_++;
+            digits = true;
+        }
         if (pos_ < s_.size() && s_[pos_] == '.') {
             pos_++;
-            while (pos_ < s_.size() && std::isdigit(static_cast<unsigned char>(s_[pos_]))) { pos_++; digits = true; }
+            while (pos_ < s_.size() && std::isdigit(static_cast<unsigned char>(s_[pos_]))) {
+                pos_++;
+                digits = true;
+            }
         }
         if (digits && pos_ < s_.size() && (s_[pos_] == 'e' || s_[pos_] == 'E')) {
             pos_++;
             if (pos_ < s_.size() && (s_[pos_] == '-' || s_[pos_] == '+')) pos_++;
             bool edigits = false;
-            while (pos_ < s_.size() && std::isdigit(static_cast<unsigned char>(s_[pos_]))) { pos_++; edigits = true; }
+            while (pos_ < s_.size() && std::isdigit(static_cast<unsigned char>(s_[pos_]))) {
+                pos_++;
+                edigits = true;
+            }
             if (!edigits) return fail("malformed exponent");
         }
         if (!digits) return fail("expected value");
@@ -209,7 +290,11 @@ private:
         pos_++; /* '[' */
         Value arr = Value::array();
         skip_ws();
-        if (pos_ < s_.size() && s_[pos_] == ']') { pos_++; *out = arr; return true; }
+        if (pos_ < s_.size() && s_[pos_] == ']') {
+            pos_++;
+            *out = std::move(arr);
+            return true;
+        }
         while (true) {
             skip_ws();
             Value item;
@@ -217,8 +302,14 @@ private:
             arr.push_back(std::move(item));
             skip_ws();
             if (pos_ >= s_.size()) return fail("unterminated array");
-            if (s_[pos_] == ',') { pos_++; continue; }
-            if (s_[pos_] == ']') { pos_++; break; }
+            if (s_[pos_] == ',') {
+                pos_++;
+                continue;
+            }
+            if (s_[pos_] == ']') {
+                pos_++;
+                break;
+            }
             return fail("expected ',' or ']'");
         }
         *out = std::move(arr);
@@ -229,7 +320,11 @@ private:
         pos_++; /* '{' */
         Value obj = Value::object();
         skip_ws();
-        if (pos_ < s_.size() && s_[pos_] == '}') { pos_++; *out = obj; return true; }
+        if (pos_ < s_.size() && s_[pos_] == '}') {
+            pos_++;
+            *out = std::move(obj);
+            return true;
+        }
         while (true) {
             skip_ws();
             Value key;
@@ -244,8 +339,14 @@ private:
             obj[key.as_string()] = std::move(val);
             skip_ws();
             if (pos_ >= s_.size()) return fail("unterminated object");
-            if (s_[pos_] == ',') { pos_++; continue; }
-            if (s_[pos_] == '}') { pos_++; break; }
+            if (s_[pos_] == ',') {
+                pos_++;
+                continue;
+            }
+            if (s_[pos_] == '}') {
+                pos_++;
+                break;
+            }
             return fail("expected ',' or '}'");
         }
         *out = std::move(obj);
@@ -257,7 +358,7 @@ private:
 
 const Value &Value::operator[](const std::string &key) const {
     auto it = obj_.find(key);
-    return it == obj_.end() ? kNull : it->second;
+    return it == obj_.end() ? null_value() : it->second;
 }
 
 Value &Value::operator[](const std::string &key) {
@@ -272,10 +373,18 @@ bool Value::has(const std::string &key) const {
 std::string Value::dump() const {
     std::string out;
     switch (type_) {
-    case Type::Null:   out += "null"; break;
-    case Type::Bool:   out += bool_ ? "true" : "false"; break;
-    case Type::Number: dump_number(num_, &out); break;
-    case Type::String: dump_string(str_, &out); break;
+    case Type::Null:
+        out += "null";
+        break;
+    case Type::Bool:
+        out += bool_ ? "true" : "false";
+        break;
+    case Type::Number:
+        dump_number(num_, &out);
+        break;
+    case Type::String:
+        dump_string(str_, &out);
+        break;
     case Type::Array: {
         out.push_back('[');
         for (size_t i = 0; i < arr_.size(); i++) {

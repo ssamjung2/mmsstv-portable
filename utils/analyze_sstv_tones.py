@@ -3,6 +3,7 @@
 Analyze SSTV tone frequencies in test WAV files
 Shows standard (1100/1300) vs alt (1080/1320) tone energies
 """
+import sys
 import wave
 import numpy as np
 from scipy.fft import rfft, rfftfreq
@@ -67,7 +68,7 @@ def analyze_wav(filepath, skip_seconds=0.5, duration=1.0):
 
 def main():
     # Analyze all test files
-    test_dir = "/Users/ssamjung/Desktop/WIP/mmsstv-portable/tests/audio"
+    test_dir = sys.argv[1] if len(sys.argv) > 1 else "tests/audio"
     wav_files = sorted(glob.glob(os.path.join(test_dir, "*.wav")))
     
     print("SSTV VIS Tone Analysis")
